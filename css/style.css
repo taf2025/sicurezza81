@@ -1,0 +1,87 @@
+/* ============================================================
+   style.css — Tema professionale Pubblica Amministrazione
+   ============================================================ */
+:root {
+  --pa-green: #0d472d;
+  --pa-green-2: #12603d;
+  --pa-bg: #eef1f4;
+  --sidebar-w: 230px;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--pa-bg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-top: 52px;
+}
+
+/* Topbar */
+.topbar {
+  background: var(--pa-green);
+  min-height: 52px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+.topbar .navbar-brand { font-size: 1rem; color: #fff; }
+.brand-mark { font-size: 1.2rem; }
+#global-search { background: rgba(255,255,255,.95); border: none; }
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 52px; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  /* !important: Bootstrap forza background-color:transparent su .offcanvas-lg a >=992px */
+  background-color: #16232e !important;
+  overflow-y: auto;
+  z-index: 1030;
+}
+@media (max-width: 991.98px) {
+  .sidebar { top: 0; width: 260px; }
+}
+.sidebar .nav-link {
+  color: #cfd8e3;
+  border-radius: 0;
+  padding: .55rem 1rem;
+  font-size: .93rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+.sidebar .nav-link .ic { width: 1.3rem; text-align: center; }
+.sidebar .nav-link:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sidebar .nav-link.active { background: var(--pa-green-2); color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 #ffc107; }
+.sidebar .nav-sep {
+  color: #6c7a89; font-size: .7rem; text-transform: uppercase;
+  letter-spacing: .06em; padding: .8rem 1rem .2rem; font-weight: 700;
+}
+
+/* Content */
+.content { margin-left: var(--sidebar-w); min-height: calc(100vh - 52px); }
+@media (max-width: 991.98px) { .content { margin-left: 0; } }
+#main { max-width: 1400px; }
+
+h4 { color: var(--pa-green); font-weight: 700; }
+
+/* KPI cards */
+.kpi { border: none; border-left: 4px solid #ccc; transition: transform .1s; cursor: pointer; }
+.kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.kpi-val { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+.kpi-lbl { font-size: .78rem; color: #6c757d; margin-top: .25rem; text-transform: uppercase; letter-spacing: .03em; }
+.kpi.k-blue { border-left-color: #0d6efd; } .kpi.k-blue .kpi-val { color: #0d6efd; }
+.kpi.k-green { border-left-color: #198754; } .kpi.k-green .kpi-val { color: #198754; }
+.kpi.k-red { border-left-color: #dc3545; } .kpi.k-red .kpi-val { color: #dc3545; }
+.kpi.k-grey { border-left-color: #6c757d; } .kpi.k-grey .kpi-val { color: #6c757d; }
+
+.card { border: 1px solid #e2e6ea; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.table { font-size: .9rem; }
+.table thead th { font-size: .78rem; text-transform: uppercase; letter-spacing: .02em; color: #495057; }
+
+/* Checklist tri-state buttons */
+.checklist td { vertical-align: middle; }
+.btn-check:checked + .btn-outline-success { background: #198754; color: #fff; }
+.btn-check:checked + .btn-outline-danger { background: #dc3545; color: #fff; }
+.btn-check:checked + .btn-outline-secondary { background: #6c757d; color: #fff; }
+
+canvas { max-height: 260px; }
+
+/* scrollbar sidebar */
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: #2c3e4d; border-radius: 3px; }
