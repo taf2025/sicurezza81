@@ -113,16 +113,16 @@
       childRows.forEach(c => { childCounts[c[fk]] = (childCounts[c[fk]] || 0) + 1; });
     }
 
-    let html = `<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-      <div>
-        <h4 class="mb-0">${esc(cfg.title)}</h4>
-        ${parentRow ? `<small class="text-muted">${esc(cfg.parent.label)}: <strong>${esc(parentRow[cfg.parent.labelField])}</strong>
-          <a href="#" class="ms-2" data-clearparent="1">↑ mostra tutti</a></small>` : ''}
+    let html = `<div class="mb-3">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <div>
+          <h4 class="mb-0">${esc(cfg.title)}</h4>
+          ${parentRow ? `<small class="text-muted">${esc(cfg.parent.label)}: <strong>${esc(parentRow[cfg.parent.labelField])}</strong>
+            <a href="#" class="ms-2" data-clearparent="1">↑ mostra tutti</a></small>` : ''}
+        </div>
+        <button class="btn btn-primary btn-sm flex-shrink-0" id="add-${key}">+ Nuova ${esc(cfg.singular)}</button>
       </div>
-      <div class="d-flex gap-2">
-        <input type="search" class="form-control form-control-sm" style="width:200px" placeholder="Filtra…" id="flt-${key}" value="${esc(App.filters[key] || '')}">
-        <button class="btn btn-primary btn-sm" id="add-${key}">+ Nuova ${esc(cfg.singular)}</button>
-      </div>
+      <input type="search" class="form-control form-control-sm" style="max-width:320px" placeholder="🔎 Filtra…" id="flt-${key}" value="${esc(App.filters[key] || '')}">
     </div>`;
 
     html += `<div class="table-responsive"><table class="table table-hover table-sm align-middle bg-white">
@@ -253,8 +253,17 @@
       a.classList.toggle('active', a.dataset.view === view));
     render();
     window.scrollTo(0, 0);
-    const off = document.getElementById('sidebar');
-    if (off && off.classList.contains('show')) bootstrap.Offcanvas.getInstance(off)?.hide();
+    closeDrawer();
+  }
+
+  // menù a scomparsa (mobile)
+  function openDrawer() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('menu-backdrop').classList.add('show');
+  }
+  function closeDrawer() {
+    const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('open');
+    const bd = document.getElementById('menu-backdrop'); if (bd) bd.classList.remove('show');
   }
   global.go = go;
 
@@ -535,6 +544,10 @@
     document.querySelectorAll('#sidebar .nav-link').forEach(a => {
       a.onclick = (e) => { e.preventDefault(); go(a.dataset.view); };
     });
+    // menù a scomparsa mobile (gestione custom)
+    document.getElementById('menu-toggle').onclick = openDrawer;
+    document.getElementById('menu-close').onclick = closeDrawer;
+    document.getElementById('menu-backdrop').onclick = closeDrawer;
     // chip operatore in topbar
     const chip = document.getElementById('op-chip');
     if (chip) chip.onclick = () => ensureOperatore(true);
