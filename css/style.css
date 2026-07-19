@@ -25,18 +25,49 @@ body {
 .brand-mark { font-size: 1.2rem; }
 #global-search { background: rgba(255,255,255,.95); border: none; }
 
-/* Sidebar */
-.sidebar {
-  position: fixed;
-  top: 52px; left: 0; bottom: 0;
-  width: var(--sidebar-w);
-  /* !important: Bootstrap forza background-color:transparent su .offcanvas-lg a >=992px */
-  background-color: #16232e !important;
-  overflow-y: auto;
-  z-index: 1030;
-}
+/* Sidebar — sfondo scuro sempre */
+.sidebar { background-color: #16232e; }
+
+/* Mobile (<992px): menù a scomparsa custom (drawer) che entra da sinistra */
 @media (max-width: 991.98px) {
-  .sidebar { top: 0; width: 260px; }
+  .sidebar {
+    position: fixed;
+    top: 0; bottom: 0;
+    left: -300px;               /* nascosto fuori schermo a sinistra */
+    width: 264px; max-width: 84%;
+    transition: left .25s ease;
+    z-index: 1200;
+    overflow-y: auto;
+  }
+  .sidebar.open { left: 0; }    /* aperto: entra in vista */
+  .sidebar-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .6rem 1rem; border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+}
+
+/* Sfondo scuro dietro al drawer (solo mobile) */
+.sidebar-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 1199;
+  opacity: 0; visibility: hidden;
+  transition: opacity .25s ease;
+}
+.sidebar-backdrop.show { opacity: 1; visibility: visible; }
+
+/* Desktop (>=992px): sidebar fissa a sinistra, niente drawer/sfondo */
+@media (min-width: 992px) {
+  .sidebar {
+    position: fixed;
+    top: 52px; left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    overflow-y: auto;
+    z-index: 1030;
+    transform: none;
+  }
+  .sidebar-header { display: none; }
+  .sidebar-backdrop { display: none; }
 }
 .sidebar .nav-link {
   color: #cfd8e3;
