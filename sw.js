@@ -1,7 +1,7 @@
 /* ============================================================
    sw.js — Service Worker: cache offline (app shell)
    ============================================================ */
-const CACHE = 'sicurezza81-v23';
+const CACHE = 'sicurezza81-v24';
 const ASSETS = [
   './',
   './index.html',
