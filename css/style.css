@@ -12,8 +12,11 @@
 body {
   background: var(--pa-bg);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  padding-top: 52px;
 }
+/* La topbar "sticky" occupa il flusso: il contenuto scorre sempre sotto,
+   quindi i pulsanti "+ Nuova" non finiscono mai coperti (anche se la barra
+   va su due righe in orizzontale). */
+.topbar { z-index: 1040; }
 
 /* Topbar */
 .topbar {
