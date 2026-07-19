@@ -545,12 +545,19 @@
       if (!e.target.closest('#search-wrap')) document.getElementById('search-results').classList.add('d-none');
     });
 
-    // operatore = perno del DB: carica o richiedi all'avvio
-    const op = await loadOperatore();
+    // operatore = perno del DB: carica, oppure assegna un default (NON bloccante).
+    // Evita che un modale iniziale copra l'app; l'operatore si cambia dal pulsante 👤.
+    let op = await loadOperatore();
+    let opAuto = false;
+    if (!op) {
+      op = { codice: 'OP1', nome: '' };
+      DB.setOperatore(op);
+      await DB.put('meta', { chiave: 'operatore', valore: op });
+      opAuto = true;
+    }
     renderOperatoreChip();
-    if (!op) await ensureOperatore(false);
-
     go('dashboard');
+    if (opAuto) setTimeout(() => toast('Operatore impostato automaticamente: OP1. Per il lavoro in più persone puoi cambiarlo dal pulsante 👤 in alto.', 'primary'), 900);
 
     // service worker
     if ('serviceWorker' in navigator) {
