@@ -117,10 +117,13 @@
 
   async function dxFoto(a, n) {
     const D = docx; const dim = await imgDims(a);
-    const maxW = 440, scale = Math.min(1, maxW / dim.w);
+    // limita sia larghezza sia altezza (px @96dpi): niente foto a pagina intera
+    const maxW = 400, maxH = 420;
+    const scale = Math.min(maxW / dim.w, maxH / dim.h, 1);
+    const w = Math.max(1, Math.round(dim.w * scale)), h = Math.max(1, Math.round(dim.h * scale));
     const kids = [];
     try {
-      kids.push(new D.Paragraph({ spacing: { before: 80 }, children: [new D.ImageRun({ data: U.dataURLtoBytes(a.data), transformation: { width: Math.round(dim.w * scale), height: Math.round(dim.h * scale) } })] }));
+      kids.push(new D.Paragraph({ spacing: { before: 80 }, children: [new D.ImageRun({ data: U.dataURLtoBytes(a.data), transformation: { width: w, height: h } })] }));
     } catch (e) { /* salta */ }
     kids.push(new D.Paragraph({ spacing: { after: 140 }, children: [new D.TextRun({ text: 'Foto ' + n + ' — ' + (a.descrizione || '(senza descrizione)'), italics: true, size: 18 })] }));
     return kids;
@@ -132,9 +135,17 @@
       new D.Paragraph({ children: [new D.TextRun({ text: 'Data e firma', size: 16 })] })
     ];
   }
+  // Stili Titolo 1/2 controllati (dimensione moderata, nero) — evita gli heading
+  // giganti e colorati di default della libreria.
+  const DOCX_STYLES = {
+    default: {
+      heading1: { run: { size: 26, bold: true, color: '000000' }, paragraph: { spacing: { before: 240, after: 100 } } },
+      heading2: { run: { size: 23, bold: true, color: '000000' }, paragraph: { spacing: { before: 160, after: 60 } } }
+    }
+  };
   async function saveDocx(filename, children) {
     if (typeof docx === 'undefined') throw new Error('Libreria Word non caricata.');
-    const d = new docx.Document({ creator: 'Sicurezza 81', title: filename, sections: [{ properties: {}, children }] });
+    const d = new docx.Document({ creator: 'Sicurezza 81', title: filename, styles: DOCX_STYLES, sections: [{ properties: {}, children }] });
     const blob = await docx.Packer.toBlob(d);
     U.downloadBlob(blob, filename);
   }
@@ -371,7 +382,7 @@
   async function relazioneFinaleDocx(anno) {
     const { orgRows, statRows, critRows, azRows, gruppiFoto, rif } = await relazioneData(anno);
     const children = [];
-    children.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'Relazione finale annuale ' + anno, bold: true, size: 34 })] }));
+    children.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'Relazione finale annuale ' + anno, bold: true, size: 30 })] }));
     children.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 200 }, children: [new docx.TextRun({ text: 'Sicurezza di ambienti, arredi e scaffalature — D.Lgs. 81/2008', italics: true, size: 20 })] }));
     children.push(dxH1('1. Riferimenti normativi')); children.push(dxP(rif));
     children.push(dxH1('2. Organigramma della sicurezza'));

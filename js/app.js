@@ -5,6 +5,8 @@
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
+  const APP_VERSION = 'v27';
+
   const App = {
     view: 'dashboard',
     params: {},
@@ -548,6 +550,15 @@
     document.getElementById('menu-toggle').onclick = openDrawer;
     document.getElementById('menu-close').onclick = closeDrawer;
     document.getElementById('menu-backdrop').onclick = closeDrawer;
+    // versione visibile (subito la costante, poi quella realmente in cache)
+    const vEl = document.getElementById('app-version');
+    if (vEl) {
+      vEl.textContent = APP_VERSION;
+      if ('caches' in window) caches.keys().then(ks => {
+        const vers = ks.map(k => (k.match(/sicurezza81-v(\d+)/) || [])[1]).filter(Boolean).map(Number);
+        if (vers.length) vEl.textContent = 'v' + Math.max(...vers);
+      }).catch(() => {});
+    }
     // chip operatore in topbar
     const chip = document.getElementById('op-chip');
     if (chip) chip.onclick = () => ensureOperatore(true);
