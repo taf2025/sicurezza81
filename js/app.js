@@ -3,7 +3,7 @@
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
-  const APP_VERSION = 'v28';
+  const APP_VERSION = 'v29';
 
   const App = {
     view: 'dashboard',
@@ -83,6 +83,35 @@
     return m;
   }
 
+  // genitore gerarchico ed etichetta leggibile di ogni tabella
+  function anagInfo(store) {
+    return {
+      edifici: { fk: 'idSede', parent: 'sedi' },
+      piani: { fk: 'idEdificio', parent: 'edifici' },
+      ambienti: { fk: 'idPiano', parent: 'piani' },
+      beni: { fk: 'idAmbiente', parent: 'ambienti' }
+    }[store] || null;
+  }
+  function anagLabel(store, rec) {
+    if (!rec) return '—';
+    if (store === 'piani') return 'Piano ' + (rec.numero || '');
+    if (store === 'sedi' || store === 'edifici') return rec.nome || rec.codice || '—';
+    return rec.codice || '—'; // ambienti, beni
+  }
+  // percorso completo di un record, es. "Sede Centrale › Edificio A"
+  async function breadcrumb(store, rec) {
+    const parti = [];
+    let cur = rec, curStore = store;
+    while (cur) {
+      parti.unshift(anagLabel(curStore, cur));
+      const info = anagInfo(curStore);
+      if (!info) break;
+      cur = await DB.get(info.parent, cur[info.fk]);
+      curStore = info.parent;
+    }
+    return parti.join(' › ');
+  }
+
   // ---------- Rendering vista generica ----------
   async function renderResource(key) {
     const cfg = RES[key];
@@ -96,8 +125,10 @@
       parentRow = await DB.get(cfg.parent.store, App.params[cfg.parent.fk]);
     }
 
-    // mappe parent per etichette
+    // mappe parent per etichette + percorso completo per ciascun genitore
     const pmap = cfg.parent ? await parentMap(cfg.parent.store) : null;
+    const pcrumb = {};
+    if (cfg.parent) { for (const pid of Object.keys(pmap)) pcrumb[pid] = await breadcrumb(cfg.parent.store, pmap[pid]); }
 
     // filtro testo
     const q = (App.filters[key] || '').toLowerCase().trim();
@@ -139,8 +170,8 @@
     rows.forEach(r => {
       html += '<tr>';
       if (cfg.parent) {
-        const p = pmap[r[cfg.parent.fk]];
-        html += `<td>${p ? esc(p[cfg.parent.labelField]) : '<span class="text-danger">—</span>'}</td>`;
+        const crumb = pcrumb[r[cfg.parent.fk]];
+        html += `<td class="small">${crumb ? esc(crumb) : '<span class="text-danger">—</span>'}</td>`;
       }
       cfg.fields.filter(f => f.col).forEach(f => {
         let v = r[f.name];
@@ -191,7 +222,9 @@
     if (cfg.parent) {
       const parents = await DB.all(cfg.parent.store);
       const cur = row[cfg.parent.fk] || (presetParent ? presetParent.id : (App.params[cfg.parent.fk] || ''));
-      const opts = parents.map(p => ({ value: p.id, label: p[cfg.parent.labelField] + (p.codice && p.codice !== p[cfg.parent.labelField] ? ' (' + p.codice + ')' : '') }));
+      // etichetta col percorso completo (es. "Sede Centrale › Edificio A")
+      const opts = [];
+      for (const p of parents) opts.push({ value: p.id, label: await breadcrumb(cfg.parent.store, p) });
       parentSelect = `<div class="col-12"><label class="form-label">${esc(cfg.parent.label)} *</label>
         <select class="form-select" name="${cfg.parent.fk}" required>
           <option value="">— seleziona —</option>${options(opts, cur)}</select></div>`;
