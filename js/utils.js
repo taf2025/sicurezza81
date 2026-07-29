@@ -1,6 +1,4 @@
-/* ============================================================
-   utils.js — Utility condivise (UI, formattazione, file)
-   ============================================================ */
+// Funzioni di comodo usate un po' ovunque: finestre, avvisi, formattazione, file.
 (function (global) {
   'use strict';
 
@@ -180,6 +178,27 @@
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
+  // Carica una libreria solo quando serve, così l'avvio resta leggero
+  // (importante sui dispositivi datati con poca memoria).
+  const _scripts = {};
+  function loadScript(src) {
+    if (_scripts[src]) return _scripts[src];
+    _scripts[src] = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => { delete _scripts[src]; reject(new Error('Impossibile caricare ' + src)); };
+      document.head.appendChild(s);
+    });
+    return _scripts[src];
+  }
+  async function ensurePdf() {
+    if (!(window.jspdf && window.jspdf.jsPDF)) await loadScript('vendor/jspdf.umd.min.js');
+    await loadScript('vendor/jspdf.plugin.autotable.min.js');
+  }
+  async function ensureXlsx() { if (typeof XLSX === 'undefined') await loadScript('vendor/xlsx.full.min.js'); }
+  async function ensureDocx() { if (typeof docx === 'undefined') await loadScript('vendor/docx.umd.js'); }
+
   function bytesHuman(n) {
     if (!n) return '0 B';
     const u = ['B', 'KB', 'MB', 'GB'];
@@ -199,6 +218,7 @@
   global.U = {
     esc, todayISO, fmtDate, esitoBadge, statoNcBadge, rischioBadge, classeDannoBadge,
     toast, modal, confirmDialog, fileToDataURL, compressImage, dataURLtoBytes,
-    downloadBlob, bytesHuman, options, addMonthsISO
+    downloadBlob, bytesHuman, options, addMonthsISO,
+    loadScript, ensurePdf, ensureXlsx, ensureDocx
   };
 })(window);

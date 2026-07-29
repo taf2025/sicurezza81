@@ -1,11 +1,9 @@
-/* ============================================================
-   app.js — Router, motore CRUD generico, anagrafica gerarchica
-   ============================================================ */
+// Cuore dell'app: avvio, navigazione fra le sezioni e gestione delle anagrafiche.
 (function (global) {
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
-  const APP_VERSION = 'v27';
+  const APP_VERSION = 'v28';
 
   const App = {
     view: 'dashboard',

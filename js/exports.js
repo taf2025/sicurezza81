@@ -1,6 +1,4 @@
-/* ============================================================
-   exports.js — Esportazione Excel + Backup/Ripristino JSON
-   ============================================================ */
+// Esportazione in Excel e backup/ripristino dell'archivio.
 (function (global) {
   'use strict';
   const { toast, downloadBlob, confirmDialog } = U;
@@ -58,6 +56,7 @@
 
   async function excel() {
     try {
+      await U.ensureXlsx();
       const wb = XLSX.utils.book_new();
       const [sedi, edifici, piani, ambienti, beni, verifiche, nc, figure] = await Promise.all([
         DB.all('sedi'), DB.all('edifici'), DB.all('piani'), DB.all('ambienti'),

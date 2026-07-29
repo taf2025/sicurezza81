@@ -1,7 +1,4 @@
-/* ============================================================
-   reports.js — Generazione report PDF (jsPDF) e Word (.docx)
-   Colori neutri (testo nero, intestazioni tabella grigie).
-   ============================================================ */
+// Report in PDF e Word. Impaginazione sobria: testo nero, tabelle grigie.
 (function (global) {
   'use strict';
   const { esc, toast, modal, fmtDate, options } = U;
@@ -160,9 +157,7 @@
     return out;
   }
 
-  // ============================================================
-  //  VERBALE DI VERIFICA
-  // ============================================================
+  // --- Verbale di verifica ---
   async function verbaleData(v) {
     const ctx = await contextOfVerifica(v);
     const cl = DATA.CHECKLIST[v.tipoChecklist];
@@ -188,6 +183,7 @@
   }
 
   async function verbaleVerificaPdf(v) {
+    await U.ensurePdf();
     const { ctx, cl, isScaff, info, checklist, foto } = await verbaleData(v);
     const d = doc();
     let y = header(d, isScaff ? 'Verbale di verifica scaffalature' : (v.idBene ? 'Verbale di verifica bene/arredo' : 'Verbale di verifica ambiente'), 'Riferimento: ' + cl.norma);
@@ -206,6 +202,7 @@
   }
 
   async function verbaleVerificaDocx(v) {
+    await U.ensureDocx();
     const { ctx, cl, isScaff, info, checklist, foto } = await verbaleData(v);
     const children = dxTitle(isScaff ? 'Verbale di verifica scaffalature' : (v.idBene ? 'Verbale di verifica bene/arredo' : 'Verbale di verifica ambiente'), 'Riferimento: ' + cl.norma);
     children.push(dxTable(['Dato', 'Valore'], info));
@@ -220,9 +217,7 @@
     await saveDocx((isScaff ? 'verbale_scaffalatura_' : 'verbale_verifica_') + (ctx.bene ? ctx.bene.codice : (ctx.ambiente ? ctx.ambiente.codice : 'x')) + '.docx', children);
   }
 
-  // ============================================================
-  //  ORGANIGRAMMA
-  // ============================================================
+  // --- Organigramma ---
   async function organigrammaRows() {
     const [figure, sedi] = await Promise.all([DB.all('figure'), DB.all('sedi')]);
     const sMap = {}; sedi.forEach(s => sMap[s.id] = s);
@@ -233,6 +228,7 @@
       [f.email, f.telefono].filter(Boolean).join(' · ') || '—', fmtDate(f.dataNomina), DATA.RUOLO_NORMA[f.ruolo] || '']);
   }
   async function organigrammaPdf() {
+    await U.ensurePdf();
     const rows = await organigrammaRows();
     const d = doc();
     let y = header(d, 'Organigramma della sicurezza', 'Figure della prevenzione e protezione — D.Lgs. 81/2008');
@@ -242,6 +238,7 @@
     footer(d); d.save('organigramma_sicurezza.pdf');
   }
   async function organigrammaDocx() {
+    await U.ensureDocx();
     const rows = await organigrammaRows();
     const children = dxTitle('Organigramma della sicurezza', 'Figure della prevenzione e protezione — D.Lgs. 81/2008');
     children.push(dxTable(['Ruolo', 'Nominativo', 'Qualifica / Ufficio', 'Sede', 'Contatti', 'Nomina', 'Rif. normativo'],
@@ -249,9 +246,7 @@
     await saveDocx('organigramma_sicurezza.docx', children);
   }
 
-  // ============================================================
-  //  ELENCO NON CONFORMITÀ
-  // ============================================================
+  // --- Elenco non conformità ---
   async function elencoNcRows() {
     const ncs = (await DB.all('nonconformita')).sort((a, b) => (a.numero || '').localeCompare(b.numero || ''));
     const rows = [];
@@ -259,6 +254,7 @@
     return rows;
   }
   async function elencoNcPdf() {
+    await U.ensurePdf();
     const rows = await elencoNcRows();
     const d = doc();
     let y = header(d, 'Elenco Non Conformità', 'Totale: ' + rows.length);
@@ -268,6 +264,7 @@
     footer(d); d.save('elenco_non_conformita.pdf');
   }
   async function elencoNcDocx() {
+    await U.ensureDocx();
     const rows = await elencoNcRows();
     const children = dxTitle('Elenco Non Conformità', 'Totale: ' + rows.length);
     children.push(dxTable(['N. NC', 'Apertura', 'Ubicazione', 'Descrizione', 'Rischio', 'Stato', 'Scadenza'],
@@ -275,9 +272,7 @@
     await saveDocx('elenco_non_conformita.docx', children);
   }
 
-  // ============================================================
-  //  PIANO AZIONI CORRETTIVE
-  // ============================================================
+  // --- Piano azioni correttive ---
   async function pianoAzioniRows() {
     const ncs = (await DB.all('nonconformita')).filter(n => n.stato !== 'Chiusa').sort((a, b) => rank(b.livelloRischio) - rank(a.livelloRischio));
     const rows = [];
@@ -285,6 +280,7 @@
     return rows;
   }
   async function pianoAzioniPdf() {
+    await U.ensurePdf();
     const rows = await pianoAzioniRows();
     const d = doc();
     let y = header(d, 'Piano delle Azioni Correttive', 'Non conformità aperte/in corso: ' + rows.length);
@@ -294,6 +290,7 @@
     footer(d); d.save('piano_azioni_correttive.pdf');
   }
   async function pianoAzioniDocx() {
+    await U.ensureDocx();
     const rows = await pianoAzioniRows();
     const children = dxTitle('Piano delle Azioni Correttive', 'Non conformità aperte/in corso: ' + rows.length);
     children.push(dxTable(['N. NC', 'Ubicazione', 'Descrizione', 'Misure', 'Responsabile', 'Scadenza', 'Rischio', 'Stato'],
@@ -301,9 +298,7 @@
     await saveDocx('piano_azioni_correttive.docx', children);
   }
 
-  // ============================================================
-  //  RELAZIONE FINALE ANNUALE
-  // ============================================================
+  // --- Relazione finale annuale ---
   async function relazioneData(anno) {
     const [sedi, ambienti, beni, verifiche, nc, figure, allegati] = await Promise.all([
       DB.all('sedi'), DB.all('ambienti'), DB.all('beni'), DB.all('verifiche'), DB.all('nonconformita'), DB.all('figure'), DB.all('allegati')
@@ -344,6 +339,7 @@
   }
 
   async function relazioneFinalePdf(anno) {
+    await U.ensurePdf();
     const { orgRows, statRows, critRows, azRows, gruppiFoto, rif } = await relazioneData(anno);
     const d = doc();
     let y = header(d, 'Relazione finale annuale ' + anno, 'Sicurezza di ambienti, arredi e scaffalature');
@@ -380,6 +376,7 @@
   }
 
   async function relazioneFinaleDocx(anno) {
+    await U.ensureDocx();
     const { orgRows, statRows, critRows, azRows, gruppiFoto, rif } = await relazioneData(anno);
     const children = [];
     children.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'Relazione finale annuale ' + anno, bold: true, size: 30 })] }));
