@@ -88,7 +88,7 @@
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title">${esc(opts.title || '')}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              ${opts.noClose ? '' : `<button type="button" class="btn-close" data-bs-dismiss="modal"></button>`}
             </div>
             <div class="modal-body">${opts.body || ''}</div>
             <div class="modal-footer">
@@ -98,7 +98,7 @@
           </div>
         </div>`;
       document.body.appendChild(wrap);
-      const inst = new bootstrap.Modal(wrap);
+      const inst = new bootstrap.Modal(wrap, opts.staticBackdrop ? { backdrop: 'static', keyboard: false } : {});
       let confirmed = false;
       wrap.querySelector('#' + id + '-ok').addEventListener('click', () => {
         if (opts.onValidate && !opts.onValidate(wrap)) return;
