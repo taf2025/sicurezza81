@@ -3,7 +3,7 @@
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
-  const APP_VERSION = 'v30';
+  const APP_VERSION = 'v31';
 
   const App = {
     view: 'dashboard',
@@ -411,7 +411,9 @@
     const has = cur && cur.codice && cur.codice !== 'NA';
     if (has && !force) return cur;
     const res = await modal({
-      title: 'Identifica operatore', size: 'md', okText: 'Conferma', hideCancel: !has,
+      // al primo avvio (nessun operatore) la scelta è obbligatoria: niente chiusura/annulla
+      title: 'Identifica operatore', size: 'md', okText: 'Conferma',
+      hideCancel: !has, noClose: !has, staticBackdrop: !has,
       body: `<p class="text-muted small">L'operatore è il perno del database: marca ogni dato inserito e distingue le copie usate da persone diverse. Usa un <strong>codice breve e univoco</strong> (es. le tue iniziali).</p>
         <form id="op-form" class="row g-3">
           <div class="col-md-5"><label class="form-label">Codice operatore *</label>
@@ -600,19 +602,12 @@
       if (!e.target.closest('#search-wrap')) document.getElementById('search-results').classList.add('d-none');
     });
 
-    // operatore = perno del DB: carica, oppure assegna un default (NON bloccante).
-    // Evita che un modale iniziale copra l'app; l'operatore si cambia dal pulsante 👤.
-    let op = await loadOperatore();
-    let opAuto = false;
-    if (!op) {
-      op = { codice: 'OP1', nome: '' };
-      DB.setOperatore(op);
-      await DB.put('meta', { chiave: 'operatore', valore: op });
-      opAuto = true;
-    }
+    // operatore = perno del DB: al primo avvio va indicato obbligatoriamente,
+    // così ogni dato inserito resta associato a chi lo ha registrato.
+    const op = await loadOperatore();
     renderOperatoreChip();
-    go('dashboard');
-    if (opAuto) setTimeout(() => toast('Operatore impostato automaticamente: OP1. Per il lavoro in più persone puoi cambiarlo dal pulsante 👤 in alto.', 'primary'), 900);
+    go('dashboard'); // disegna subito il contenuto, dietro all'eventuale richiesta
+    if (!op) await ensureOperatore(false);
 
     // service worker
     if ('serviceWorker' in navigator) {
