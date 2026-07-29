@@ -3,7 +3,7 @@
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
-  const APP_VERSION = 'v29';
+  const APP_VERSION = 'v30';
 
   const App = {
     view: 'dashboard',
