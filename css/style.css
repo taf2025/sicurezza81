@@ -1,6 +1,4 @@
-/* ============================================================
-   style.css — Tema professionale Pubblica Amministrazione
-   ============================================================ */
+/* Foglio di stile — impostazione grafica sobria da Pubblica Amministrazione */
 :root {
   --pa-green: #0d472d;
   --pa-green-2: #12603d;
@@ -93,6 +91,17 @@ body {
 #main { max-width: 1400px; }
 
 h4 { color: var(--pa-green); font-weight: 700; }
+
+/* Barra "Sede attiva" */
+.sede-bar {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  padding: .4rem .9rem;
+  background: #e9eef2;
+  border-bottom: 1px solid #d5dde3;
+  font-size: .9rem;
+}
+.sede-bar.attiva { background: #dff0e3; border-bottom-color: #b8d9c1; }
+.sede-bar select { max-width: 320px; }
 
 /* KPI cards */
 .kpi { border: none; border-left: 4px solid #ccc; transition: transform .1s; cursor: pointer; }
