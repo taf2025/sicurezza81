@@ -157,6 +157,26 @@
     return out;
   }
 
+  // --- Ambito "sede attiva": i report si limitano alla sede selezionata ---
+  async function sedeAttivaNome() {
+    if (!App.sedeAttiva) return '';
+    const s = await DB.get('sedi', App.sedeAttiva);
+    return s ? s.nome : '';
+  }
+  // aggiunge il nome della sede al sottotitolo del documento
+  function conSede(sottotitolo, nome) { return nome ? (sottotitolo ? sottotitolo + ' — ' + nome : nome) : sottotitolo; }
+  // filtra una collezione per la sede attiva (store = 'verifiche','nonconformita','ambienti','beni')
+  async function filtraSede(lista, store) {
+    if (!App.sedeAttiva) return lista;
+    const idx = await sedeIndex();
+    return lista.filter(r => sedeOfRecord(store, r, idx) === App.sedeAttiva);
+  }
+  // figure della sede attiva + quelle valide per tutte le sedi/ente
+  function filtraFigure(figure) {
+    if (!App.sedeAttiva) return figure;
+    return figure.filter(f => f.idSede === App.sedeAttiva || !f.idSede);
+  }
+
   // --- Verbale di verifica ---
   async function verbaleData(v) {
     const ctx = await contextOfVerifica(v);
@@ -222,7 +242,7 @@
     const [figure, sedi] = await Promise.all([DB.all('figure'), DB.all('sedi')]);
     const sMap = {}; sedi.forEach(s => sMap[s.id] = s);
     const ordF = {}; DATA.RUOLI_FIGURE.forEach((r, i) => ordF[r] = i);
-    const figOrd = figure.slice().sort((a, b) => (ordF[a.ruolo] - ordF[b.ruolo]) || (a.nominativo || '').localeCompare(b.nominativo || ''));
+    const figOrd = filtraFigure(figure).slice().sort((a, b) => (ordF[a.ruolo] - ordF[b.ruolo]) || (a.nominativo || '').localeCompare(b.nominativo || ''));
     return figOrd.map(f => [f.ruolo, f.nominativo || '—', f.qualifica || '—',
       f.idSede ? (sMap[f.idSede] ? sMap[f.idSede].nome : '—') : 'Tutte le sedi / Ente',
       [f.email, f.telefono].filter(Boolean).join(' · ') || '—', fmtDate(f.dataNomina), DATA.RUOLO_NORMA[f.ruolo] || '']);
@@ -231,7 +251,7 @@
     await U.ensurePdf();
     const rows = await organigrammaRows();
     const d = doc();
-    let y = header(d, 'Organigramma della sicurezza', 'Figure della prevenzione e protezione — D.Lgs. 81/2008');
+    let y = header(d, 'Organigramma della sicurezza', conSede('Figure della prevenzione e protezione — D.Lgs. 81/2008', await sedeAttivaNome()));
     d.autoTable({ startY: y, styles: Object.assign({ fontSize: 8, cellPadding: 1.5 }, GRID), theme: 'grid',
       head: [['Ruolo', 'Nominativo', 'Qualifica / Ufficio', 'Sede', 'Contatti', 'Nomina', 'Rif. normativo']],
       body: rows.length ? rows : [['—', 'Nessuna figura registrata', '', '', '', '', '']], headStyles: TH });
@@ -240,7 +260,7 @@
   async function organigrammaDocx() {
     await U.ensureDocx();
     const rows = await organigrammaRows();
-    const children = dxTitle('Organigramma della sicurezza', 'Figure della prevenzione e protezione — D.Lgs. 81/2008');
+    const children = dxTitle('Organigramma della sicurezza', conSede('Figure della prevenzione e protezione — D.Lgs. 81/2008', await sedeAttivaNome()));
     children.push(dxTable(['Ruolo', 'Nominativo', 'Qualifica / Ufficio', 'Sede', 'Contatti', 'Nomina', 'Rif. normativo'],
       rows.length ? rows : [['—', 'Nessuna figura registrata', '', '', '', '', '']]));
     await saveDocx('organigramma_sicurezza.docx', children);
@@ -248,7 +268,8 @@
 
   // --- Elenco non conformità ---
   async function elencoNcRows() {
-    const ncs = (await DB.all('nonconformita')).sort((a, b) => (a.numero || '').localeCompare(b.numero || ''));
+    let ncs = (await DB.all('nonconformita')).sort((a, b) => (a.numero || '').localeCompare(b.numero || ''));
+    ncs = await filtraSede(ncs, 'nonconformita');
     const rows = [];
     for (const n of ncs) rows.push([n.numero, fmtDate(n.dataApertura), await locOf(n), (n.descrizione || '').slice(0, 60), n.livelloRischio, n.stato, fmtDate(n.dataPrevista)]);
     return rows;
@@ -257,7 +278,7 @@
     await U.ensurePdf();
     const rows = await elencoNcRows();
     const d = doc();
-    let y = header(d, 'Elenco Non Conformità', 'Totale: ' + rows.length);
+    let y = header(d, 'Elenco Non Conformità', conSede('Totale: ' + rows.length, await sedeAttivaNome()));
     d.autoTable({ startY: y, styles: Object.assign({ fontSize: 8, cellPadding: 1.5 }, GRID), theme: 'grid',
       head: [['N. NC', 'Apertura', 'Ubicazione', 'Descrizione', 'Rischio', 'Stato', 'Scadenza']],
       body: rows.length ? rows : [['—', '', '', 'Nessuna NC', '', '', '']], headStyles: TH });
@@ -266,7 +287,7 @@
   async function elencoNcDocx() {
     await U.ensureDocx();
     const rows = await elencoNcRows();
-    const children = dxTitle('Elenco Non Conformità', 'Totale: ' + rows.length);
+    const children = dxTitle('Elenco Non Conformità', conSede('Totale: ' + rows.length, await sedeAttivaNome()));
     children.push(dxTable(['N. NC', 'Apertura', 'Ubicazione', 'Descrizione', 'Rischio', 'Stato', 'Scadenza'],
       rows.length ? rows : [['—', '', '', 'Nessuna NC', '', '', '']]));
     await saveDocx('elenco_non_conformita.docx', children);
@@ -274,7 +295,8 @@
 
   // --- Piano azioni correttive ---
   async function pianoAzioniRows() {
-    const ncs = (await DB.all('nonconformita')).filter(n => n.stato !== 'Chiusa').sort((a, b) => rank(b.livelloRischio) - rank(a.livelloRischio));
+    let ncs = (await DB.all('nonconformita')).filter(n => n.stato !== 'Chiusa').sort((a, b) => rank(b.livelloRischio) - rank(a.livelloRischio));
+    ncs = await filtraSede(ncs, 'nonconformita');
     const rows = [];
     for (const n of ncs) rows.push([n.numero, await locOf(n), (n.descrizione || '').slice(0, 45), (n.misure || []).join(', '), n.responsabile || '—', fmtDate(n.dataPrevista), n.livelloRischio, n.stato]);
     return rows;
@@ -283,7 +305,7 @@
     await U.ensurePdf();
     const rows = await pianoAzioniRows();
     const d = doc();
-    let y = header(d, 'Piano delle Azioni Correttive', 'Non conformità aperte/in corso: ' + rows.length);
+    let y = header(d, 'Piano delle Azioni Correttive', conSede('Non conformità aperte/in corso: ' + rows.length, await sedeAttivaNome()));
     d.autoTable({ startY: y, styles: Object.assign({ fontSize: 7.5, cellPadding: 1.5 }, GRID), theme: 'grid',
       head: [['N. NC', 'Ubicazione', 'Descrizione', 'Misure', 'Responsabile', 'Scadenza', 'Rischio', 'Stato']],
       body: rows.length ? rows : [['—', '', 'Nessuna azione aperta', '', '', '', '', '']], headStyles: TH });
@@ -292,7 +314,7 @@
   async function pianoAzioniDocx() {
     await U.ensureDocx();
     const rows = await pianoAzioniRows();
-    const children = dxTitle('Piano delle Azioni Correttive', 'Non conformità aperte/in corso: ' + rows.length);
+    const children = dxTitle('Piano delle Azioni Correttive', conSede('Non conformità aperte/in corso: ' + rows.length, await sedeAttivaNome()));
     children.push(dxTable(['N. NC', 'Ubicazione', 'Descrizione', 'Misure', 'Responsabile', 'Scadenza', 'Rischio', 'Stato'],
       rows.length ? rows : [['—', '', 'Nessuna azione aperta', '', '', '', '', '']]));
     await saveDocx('piano_azioni_correttive.docx', children);
@@ -300,9 +322,20 @@
 
   // --- Relazione finale annuale ---
   async function relazioneData(anno) {
-    const [sedi, ambienti, beni, verifiche, nc, figure, allegati] = await Promise.all([
+    let [sedi, ambienti, beni, verifiche, nc, figure, allegati] = await Promise.all([
       DB.all('sedi'), DB.all('ambienti'), DB.all('beni'), DB.all('verifiche'), DB.all('nonconformita'), DB.all('figure'), DB.all('allegati')
     ]);
+    const sedeNome = await sedeAttivaNome();
+    // ambito "sede attiva": la relazione riguarda solo quella sede
+    if (App.sedeAttiva) {
+      const idx = await sedeIndex();
+      ambienti = ambienti.filter(a => sedeOfRecord('ambienti', a, idx) === App.sedeAttiva);
+      beni = beni.filter(b => sedeOfRecord('beni', b, idx) === App.sedeAttiva);
+      verifiche = verifiche.filter(v => sedeOfRecord('verifiche', v, idx) === App.sedeAttiva);
+      nc = nc.filter(n => sedeOfRecord('nonconformita', n, idx) === App.sedeAttiva);
+      figure = filtraFigure(figure);
+      sedi = sedi.filter(s => s.id === App.sedeAttiva);
+    }
     const sMap = {}; sedi.forEach(s => sMap[s.id] = s);
     const vAnno = verifiche.filter(v => (v.data || '').startsWith(anno));
     const ncAnno = nc.filter(n => (n.dataApertura || '').startsWith(anno));
@@ -335,14 +368,14 @@
       if (foto.length) { const ctx = await contextOfVerifica(v); gruppiFoto.push({ titolo: ctx.label + ' — ' + fmtDate(v.data) + ' · ' + (v.esito || ''), v, foto }); }
     }
     const rif = 'La presente relazione è redatta in conformità al D.Lgs. 81/2008, con particolare riferimento agli artt. 15 (misure generali di tutela), 17 e 18 (obblighi del datore di lavoro e dirigenti), 28 e 29 (valutazione dei rischi), 63 e 64 (requisiti e obblighi relativi ai luoghi di lavoro) e all\'Allegato IV (requisiti dei luoghi di lavoro).';
-    return { orgRows, statRows, critRows, azRows, gruppiFoto, rif };
+    return { orgRows, statRows, critRows, azRows, gruppiFoto, rif, sedeNome };
   }
 
   async function relazioneFinalePdf(anno) {
     await U.ensurePdf();
-    const { orgRows, statRows, critRows, azRows, gruppiFoto, rif } = await relazioneData(anno);
+    const { orgRows, statRows, critRows, azRows, gruppiFoto, rif, sedeNome } = await relazioneData(anno);
     const d = doc();
-    let y = header(d, 'Relazione finale annuale ' + anno, 'Sicurezza di ambienti, arredi e scaffalature');
+    let y = header(d, 'Relazione finale annuale ' + anno, conSede('Sicurezza di ambienti, arredi e scaffalature', sedeNome));
     d.setFont('helvetica', 'bold'); d.setFontSize(11); d.text('1. Riferimenti normativi', 14, y + 2);
     d.setFont('helvetica', 'normal'); d.setFontSize(9);
     const rl = d.splitTextToSize(rif, 182); d.text(rl, 14, y + 8); y = y + 8 + rl.length * 4.5;
@@ -377,9 +410,9 @@
 
   async function relazioneFinaleDocx(anno) {
     await U.ensureDocx();
-    const { orgRows, statRows, critRows, azRows, gruppiFoto, rif } = await relazioneData(anno);
+    const { orgRows, statRows, critRows, azRows, gruppiFoto, rif, sedeNome } = await relazioneData(anno);
     const children = [];
-    children.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'Relazione finale annuale ' + anno, bold: true, size: 30 })] }));
+    children.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'Relazione finale annuale ' + anno + (sedeNome ? ' — ' + sedeNome : ''), bold: true, size: 30 })] }));
     children.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 200 }, children: [new docx.TextRun({ text: 'Sicurezza di ambienti, arredi e scaffalature — D.Lgs. 81/2008', italics: true, size: 20 })] }));
     children.push(dxH1('1. Riferimenti normativi')); children.push(dxP(rif));
     children.push(dxH1('2. Organigramma della sicurezza'));
@@ -426,9 +459,14 @@
     const pdfBtn = (id, lbl) => `<button class="btn btn-outline-primary btn-sm" id="${id}">📄 ${lbl || 'PDF'}</button>`;
     const docBtn = (id, lbl) => `<button class="btn btn-outline-success btn-sm" id="${id}">📝 ${lbl || 'Word'}</button>`;
 
+    const sNome = await sedeAttivaNome();
+    const sedeNota = sNome
+      ? `<div class="alert alert-success py-2"><strong>🏢 Sede attiva: ${esc(sNome)}</strong> — i documenti riguardano solo questa sede.</div>`
+      : '<div class="alert alert-light border py-2 small">Nessuna sede selezionata: i documenti includono <strong>tutte le sedi</strong>. (Puoi limitarli scegliendo una sede dalla barra in alto.)</div>';
     main.innerHTML = `
       <h4 class="mb-3">Report e Relazioni</h4>
       <p class="text-muted">Ogni documento è disponibile in <strong>PDF</strong> e in <strong>Word (.docx)</strong> modificabile.</p>
+      ${sedeNota}
       <div class="row g-3">
         ${card('📝', 'Verbale di verifica', 'Seleziona una verifica registrata (ambiente / bene / scaffalatura), con documentazione fotografica.',
           pdfBtn('r-verbale-pdf', 'Verbale PDF') + docBtn('r-verbale-doc', 'Verbale Word'))}
@@ -474,8 +512,9 @@
   }
 
   async function selectVerbale(format) {
-    const verifiche = (await DB.all('verifiche')).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-    if (!verifiche.length) { toast('Nessuna verifica disponibile.', 'warning'); return; }
+    let verifiche = (await DB.all('verifiche')).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    verifiche = await filtraSede(verifiche, 'verifiche');
+    if (!verifiche.length) { toast('Nessuna verifica disponibile' + (App.sedeAttiva ? ' per la sede selezionata' : '') + '.', 'warning'); return; }
     const opts = [];
     for (const v of verifiche) { const ctx = await contextOfVerifica(v); opts.push({ value: v.id, label: fmtDate(v.data) + ' · ' + ctx.label + ' · ' + (v.esito || '') }); }
     const res = await modal({ title: 'Seleziona verifica', size: 'md', body: `<select class="form-select" id="sv">${options(opts)}</select>`, okText: 'Genera ' + (format === 'docx' ? 'Word' : 'PDF') });
