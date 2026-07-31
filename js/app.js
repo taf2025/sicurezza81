@@ -3,12 +3,13 @@
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
-  const APP_VERSION = 'v31';
+  const APP_VERSION = 'v33';
 
   const App = {
     view: 'dashboard',
     params: {},
-    filters: {}
+    filters: {},
+    sedeAttiva: (function () { try { return localStorage.getItem('sedeAttiva') || ''; } catch (e) { return ''; } })()
   };
   global.App = App;
 
@@ -112,11 +113,67 @@
     return parti.join(' › ');
   }
 
+  // Mappe id -> sede di appartenenza, calcolate una volta sola per la vista corrente.
+  async function sedeIndex() {
+    const [edifici, piani, ambienti, beni] = await Promise.all([
+      DB.all('edifici'), DB.all('piani'), DB.all('ambienti'), DB.all('beni')
+    ]);
+    const ediSede = {}; edifici.forEach(e => ediSede[e.id] = e.idSede);
+    const pianoSede = {}; piani.forEach(p => pianoSede[p.id] = ediSede[p.idEdificio]);
+    const ambSede = {}; ambienti.forEach(a => ambSede[a.id] = pianoSede[a.idPiano]);
+    const beneSede = {}; beni.forEach(b => beneSede[b.id] = ambSede[b.idAmbiente]);
+    return { ediSede, pianoSede, ambSede, beneSede };
+  }
+  // A quale sede appartiene un record di una qualsiasi tabella.
+  function sedeOfRecord(store, r, idx) {
+    switch (store) {
+      case 'sedi': return r.id;
+      case 'edifici': return r.idSede;
+      case 'piani': return idx.ediSede[r.idEdificio];
+      case 'ambienti': return idx.pianoSede[r.idPiano];
+      case 'beni': return idx.ambSede[r.idAmbiente];
+      case 'verifiche': return r.idAmbiente ? idx.ambSede[r.idAmbiente] : (r.idBene ? idx.beneSede[r.idBene] : null);
+      case 'nonconformita': return r.idBene ? idx.beneSede[r.idBene] : (r.idAmbiente ? idx.ambSede[r.idAmbiente] : null);
+    }
+    return null;
+  }
+  global.sedeIndex = sedeIndex;
+  global.sedeOfRecord = sedeOfRecord;
+
+  // Barra "Sede attiva": selettore sempre visibile che filtra tutta l'app.
+  async function renderSedeBar() {
+    const bar = document.getElementById('sede-bar');
+    if (!bar) return;
+    const sedi = await DB.all('sedi');
+    const opts = [{ value: '', label: 'Tutte le sedi' }].concat(sedi.map(s => ({ value: s.id, label: s.nome + (s.codice ? ' (' + s.codice + ')' : '') })));
+    const attiva = App.sedeAttiva && sedi.some(s => s.id === App.sedeAttiva) ? App.sedeAttiva : '';
+    if (attiva !== App.sedeAttiva) App.sedeAttiva = attiva; // sede non più esistente
+    bar.classList.toggle('attiva', !!attiva);
+    bar.innerHTML = `<span>🏢 <strong>Sede attiva:</strong></span>
+      <select class="form-select form-select-sm" id="sede-select">${U.options(opts, attiva)}</select>
+      ${attiva ? '<span class="text-success small">stai lavorando solo su questa sede</span>' : '<span class="text-muted small">tutte le sedi</span>'}`;
+    bar.querySelector('#sede-select').onchange = (e) => setSedeAttiva(e.target.value);
+  }
+  function setSedeAttiva(id) {
+    App.sedeAttiva = id || '';
+    try { localStorage.setItem('sedeAttiva', App.sedeAttiva); } catch (e) { }
+    App.params = {};
+    renderSedeBar();
+    render();
+  }
+  global.renderSedeBar = renderSedeBar;
+
   // ---------- Rendering vista generica ----------
   async function renderResource(key) {
     const cfg = RES[key];
     const main = document.getElementById('main');
     let rows = await DB.all(cfg.store);
+
+    // filtro "sede attiva" (esclusa la lista Sedi, da cui si sceglie)
+    if (App.sedeAttiva && cfg.store !== 'sedi') {
+      const idx = await sedeIndex();
+      rows = rows.filter(r => sedeOfRecord(cfg.store, r, idx) === App.sedeAttiva);
+    }
 
     // filtro per parent se passato in params
     let parentRow = null;
@@ -220,8 +277,15 @@
     let row = id ? await DB.get(cfg.store, id) : {};
     let parentSelect = '';
     if (cfg.parent) {
-      const parents = await DB.all(cfg.parent.store);
-      const cur = row[cfg.parent.fk] || (presetParent ? presetParent.id : (App.params[cfg.parent.fk] || ''));
+      let parents = await DB.all(cfg.parent.store);
+      // con una sede attiva mostro solo i genitori di quella sede
+      if (App.sedeAttiva) {
+        const idx = await sedeIndex();
+        parents = parents.filter(p => sedeOfRecord(cfg.parent.store, p, idx) === App.sedeAttiva);
+      }
+      let cur = row[cfg.parent.fk] || (presetParent ? presetParent.id : (App.params[cfg.parent.fk] || ''));
+      // nuovo edificio: preseleziono la sede attiva
+      if (!cur && cfg.parent.store === 'sedi' && App.sedeAttiva) cur = App.sedeAttiva;
       // etichetta col percorso completo (es. "Sede Centrale › Edificio A")
       const opts = [];
       for (const p of parents) opts.push({ value: p.id, label: await breadcrumb(cfg.parent.store, p) });
@@ -248,6 +312,7 @@
     });
     await DB.put(cfg.store, obj);
     toast(cfg.singular + (id ? ' aggiornata/o.' : ' creata/o.'), 'success');
+    if (cfg.store === 'sedi') renderSedeBar();
     renderResource(key);
   }
 
@@ -275,6 +340,7 @@
     if (!ok) return;
     await DB.removeCascade(cfg.store, id);
     toast(cfg.singular + ' eliminata/o.', 'danger');
+    if (cfg.store === 'sedi') renderSedeBar();
     renderResource(key);
   }
 
@@ -301,6 +367,7 @@
   global.go = go;
 
   async function render() {
+    await renderSedeBar();
     const v = App.view;
     if (RES[v]) return renderResource(v);
     if (v === 'dashboard') return Dashboard.render();

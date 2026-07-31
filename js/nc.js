@@ -1,6 +1,4 @@
-/* ============================================================
-   nc.js — Modulo Gestione Non Conformità
-   ============================================================ */
+// Gestione delle non conformità: apertura, avanzamento e chiusura.
 (function (global) {
   'use strict';
   const { esc, toast, modal, confirmDialog, statoNcBadge, rischioBadge, fmtDate, options } = U;
@@ -16,6 +14,12 @@
     const main = document.getElementById('main');
     let ncs = await DB.all('nonconformita');
     ncs.sort((a, b) => (b.dataApertura || '').localeCompare(a.dataApertura || ''));
+
+    // filtro "sede attiva"
+    if (App.sedeAttiva) {
+      const idx = await sedeIndex();
+      ncs = ncs.filter(n => sedeOfRecord('nonconformita', n, idx) === App.sedeAttiva);
+    }
 
     const fStato = App.filters.ncStato || '';
     const fRischio = App.filters.ncRischio || '';

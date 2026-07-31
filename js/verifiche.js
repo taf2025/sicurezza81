@@ -1,6 +1,4 @@
-/* ============================================================
-   verifiche.js — Modulo Verifiche (checklist, esiti, allegati)
-   ============================================================ */
+// Verifiche sul campo: checklist, esito, foto e allegati.
 (function (global) {
   'use strict';
   const { esc, toast, modal, confirmDialog, esitoBadge, fmtDate, options, fileToDataURL, bytesHuman } = U;
@@ -31,6 +29,12 @@
     const main = document.getElementById('main');
     let verifiche = await DB.all('verifiche');
     verifiche.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+
+    // filtro "sede attiva"
+    if (App.sedeAttiva) {
+      const idx = await sedeIndex();
+      verifiche = verifiche.filter(v => sedeOfRecord('verifiche', v, idx) === App.sedeAttiva);
+    }
 
     let focusBene = null;
     if (App.params.idBene) {

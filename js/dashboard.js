@@ -1,6 +1,4 @@
-/* ============================================================
-   dashboard.js — Cruscotto: contatori e grafici (Chart.js)
-   ============================================================ */
+// Pagina iniziale con i numeri di sintesi e i grafici.
 (function (global) {
   'use strict';
   const { esc } = U;
@@ -11,9 +9,19 @@
   async function render() {
     destroyCharts();
     const main = document.getElementById('main');
-    const [sedi, ambienti, beni, verifiche, nc] = await Promise.all([
+    let [sedi, ambienti, beni, verifiche, nc] = await Promise.all([
       DB.all('sedi'), DB.all('ambienti'), DB.all('beni'), DB.all('verifiche'), DB.all('nonconformita')
     ]);
+
+    // con una sede attiva, la dashboard mostra i numeri di quella sede
+    if (App.sedeAttiva) {
+      const idx = await sedeIndex();
+      sedi = sedi.filter(s => s.id === App.sedeAttiva);
+      ambienti = ambienti.filter(a => sedeOfRecord('ambienti', a, idx) === App.sedeAttiva);
+      beni = beni.filter(b => sedeOfRecord('beni', b, idx) === App.sedeAttiva);
+      verifiche = verifiche.filter(v => sedeOfRecord('verifiche', v, idx) === App.sedeAttiva);
+      nc = nc.filter(n => sedeOfRecord('nonconformita', n, idx) === App.sedeAttiva);
+    }
 
     const ncAperte = nc.filter(n => n.stato !== 'Chiusa').length;
     const ncChiuse = nc.filter(n => n.stato === 'Chiusa').length;
