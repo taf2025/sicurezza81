@@ -58,9 +58,9 @@
     try {
       await U.ensureXlsx();
       const wb = XLSX.utils.book_new();
-      const [sedi, edifici, piani, ambienti, beni, verifiche, nc, figure] = await Promise.all([
+      const [sedi, edifici, piani, ambienti, beni, verifiche, nc, figure, interventi] = await Promise.all([
         DB.all('sedi'), DB.all('edifici'), DB.all('piani'), DB.all('ambienti'),
-        DB.all('beni'), DB.all('verifiche'), DB.all('nonconformita'), DB.all('figure')
+        DB.all('beni'), DB.all('verifiche'), DB.all('nonconformita'), DB.all('figure'), DB.all('interventi')
       ]);
       const sMap = idx(sedi), eMap = idx(edifici), pMap = idx(piani), aMap = idx(ambienti), bMap = idx(beni), vMap = idx(verifiche);
 
@@ -90,6 +90,12 @@
         Descrizione: n.descrizione, Rischio: n.livelloRischio, Misure: (n.misure || []).join('; '),
         Responsabile: n.responsabile, Scadenza: n.dataPrevista, Chiusura: n.dataChiusura, Stato: n.stato
       })));
+      add(wb, 'Interventi', interventi.map(i => ({
+        Numero: i.numero, Bene: nom(bMap[i.idBene], 'codice'), Tipo: i.tipo, Importo: i.importoStimato,
+        Categoria: i.categoriaAppalto, Procedura: i.procedura, DeterminaContrarre: i.attoContrarre, DeterminaAffidamento: i.attoAffidamento,
+        CIG: i.cig, CUP: i.cup, Fornitore: i.fornitore, Affidamento: i.dataAffidamento, Esecuzione: i.dataEsecuzione,
+        Collaudo: i.esitoCollaudo, Stato: i.stato, Pubblicato: i.pubblicatoTrasparenza ? 'Sì' : 'No'
+      })));
 
       const stamp = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(wb, 'sicurezza81_export_' + stamp + '.xlsx');
@@ -104,5 +110,17 @@
     XLSX.utils.book_append_sheet(wb, ws, name);
   }
 
-  global.Exports = { backup, restore, excel };
+  // Export dati intervento pubblicabili (Amministrazione Trasparente). CSV separatore ";" per Excel IT.
+  async function interventiCsv() {
+    let its = await DB.all('interventi');
+    if (App.sedeAttiva) { const ix = await sedeIndex(); its = its.filter(i => ix.beneSede[i.idBene] === App.sedeAttiva); }
+    const bMap = idx(await DB.all('beni'));
+    const head = ['Numero', 'Bene', 'Tipo', 'Importo', 'Categoria', 'Procedura', 'Determina a contrarre', 'Determina affidamento', 'CIG', 'CUP', 'Fornitore', 'Data affidamento', 'Data esecuzione', 'Esito collaudo', 'Stato', 'Pubblicato'];
+    const rows = its.map(i => [i.numero, nom(bMap[i.idBene], 'codice'), i.tipo, i.importoStimato, i.categoriaAppalto, i.procedura, i.attoContrarre, i.attoAffidamento, i.cig, i.cup, i.fornitore, i.dataAffidamento, i.dataEsecuzione, i.esitoCollaudo, i.stato, i.pubblicatoTrasparenza ? 'Sì' : 'No']);
+    const csv = [head].concat(rows).map(r => r.map(c => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+    downloadBlob(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), 'interventi_trasparenza.csv');
+    toast('CSV trasparenza esportato.', 'success');
+  }
+
+  global.Exports = { backup, restore, excel, interventiCsv };
 })(window);

@@ -1,6 +1,4 @@
-/* ============================================================
-   figure.js — Organigramma della sicurezza (figure D.Lgs. 81/2008)
-   ============================================================ */
+// Organigramma della sicurezza: le figure previste dal D.Lgs. 81/2008.
 (function (global) {
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
@@ -45,7 +43,7 @@
         <td class="small">${esc(f.qualifica || '—')}</td>
         <td class="small">${esc(sede)}</td>
         <td class="small">${esc(contatti)}</td>
-        <td class="small">${U.fmtDate(f.dataNomina)}</td>
+        <td class="small">${U.fmtDate(f.dataNomina)}${f.attoNomina ? '<br><span class="text-muted">' + esc(f.attoNomina) + '</span>' : ''}${f.scadenzaIncarico ? '<br><span class="text-muted">scad. ' + U.fmtDate(f.scadenzaIncarico) + '</span>' : ''}</td>
         <td class="small text-muted">${esc(DATA.RUOLO_NORMA[f.ruolo] || '')}</td>
         <td class="text-end text-nowrap">
           <button class="btn btn-outline-secondary btn-sm" data-edit="${esc(f.id)}">Modifica</button>
@@ -87,6 +85,10 @@
         <input class="form-control" name="telefono" value="${esc(f.telefono || '')}"></div>
       <div class="col-md-4"><label class="form-label">Data nomina/incarico</label>
         <input type="date" class="form-control" name="dataNomina" value="${esc(f.dataNomina || '')}"></div>
+      <div class="col-md-6"><label class="form-label">Atto di nomina (prot./determina)</label>
+        <input class="form-control" name="attoNomina" value="${esc(f.attoNomina || '')}" placeholder="es. Det. n. 123 del 01/03/2025"></div>
+      <div class="col-md-6"><label class="form-label">Scadenza incarico</label>
+        <input type="date" class="form-control" name="scadenzaIncarico" value="${esc(f.scadenzaIncarico || '')}"></div>
       <div class="col-12"><label class="form-label">Note</label>
         <textarea class="form-control" name="note" rows="2">${esc(f.note || '')}</textarea></div>
     </form>`;
@@ -105,7 +107,7 @@
     if (!id) f = {};
     f.ruolo = fm.ruolo.value; f.nominativo = fm.nominativo.value; f.qualifica = fm.qualifica.value;
     f.idSede = fm.idSede.value; f.email = fm.email.value; f.telefono = fm.telefono.value;
-    f.dataNomina = fm.dataNomina.value; f.note = fm.note.value;
+    f.dataNomina = fm.dataNomina.value; f.attoNomina = fm.attoNomina.value; f.scadenzaIncarico = fm.scadenzaIncarico.value; f.note = fm.note.value;
     await DB.put('figure', f);
     toast('Figura salvata.', 'success');
     render();

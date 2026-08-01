@@ -443,6 +443,93 @@
     return '—';
   }
 
+  // --- Registro controlli scaffalature (UNI EN 15635 / art. 71 D.Lgs. 81/2008) ---
+  async function registroRows() {
+    let vs = (await DB.all('verifiche')).filter(v => v.tipoChecklist === 'scaffalature');
+    vs = await filtraSede(vs, 'verifiche');
+    vs.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    const rows = [];
+    for (const v of vs) {
+      const ctx = await contextOfVerifica(v);
+      rows.push([fmtDate(v.data), ctx.bene ? ctx.bene.codice : (ctx.ambiente ? ctx.ambiente.codice : '—'), v.tipoIspezione || '—', v.verificatore || '—', v.classeDanno || '—', v.esito || '—', fmtDate(v.prossimaVerifica)]);
+    }
+    return rows;
+  }
+  async function registroControlliPdf() {
+    await U.ensurePdf();
+    const rows = await registroRows();
+    const d = doc(); let y = header(d, 'Registro controlli scaffalature', conSede('UNI EN 15635 — art. 71 D.Lgs. 81/2008', await sedeAttivaNome()));
+    d.autoTable({ startY: y, styles: Object.assign({ fontSize: 8, cellPadding: 1.5 }, GRID), theme: 'grid',
+      head: [['Data', 'Bene', 'Tipo ispezione', 'Verificatore/PRSES', 'Classe', 'Esito', 'Prossima']],
+      body: rows.length ? rows : [['—', '', 'Nessun controllo registrato', '', '', '', '']], headStyles: TH });
+    footer(d); d.save('registro_controlli_scaffalature.pdf');
+  }
+  async function registroControlliDocx() {
+    await U.ensureDocx();
+    const rows = await registroRows();
+    const children = dxTitle('Registro controlli scaffalature', conSede('UNI EN 15635 — art. 71 D.Lgs. 81/2008', await sedeAttivaNome()));
+    children.push(dxTable(['Data', 'Bene', 'Tipo ispezione', 'Verificatore/PRSES', 'Classe', 'Esito', 'Prossima'], rows.length ? rows : [['—', '', 'Nessun controllo', '', '', '', '']]));
+    await saveDocx('registro_controlli_scaffalature.docx', children);
+  }
+
+  // --- Interventi / Amministrazione Trasparente (D.Lgs. 33/2013 art.37; D.Lgs. 36/2023 art.28) ---
+  async function interventiRows() {
+    let its = await DB.all('interventi');
+    if (App.sedeAttiva) { const idx = await sedeIndex(); its = its.filter(i => idx.beneSede[i.idBene] === App.sedeAttiva); }
+    its.sort((a, b) => (a.numero || '').localeCompare(b.numero || ''));
+    const rows = [];
+    for (const i of its) {
+      const b = i.idBene ? await DB.get('beni', i.idBene) : null;
+      rows.push([i.numero, b ? b.codice : '—', i.tipo || '—', i.importoStimato ? '€ ' + Number(i.importoStimato).toLocaleString('it-IT') : '—', i.procedura || '—', i.attoAffidamento || i.attoContrarre || '—', i.cig || '—', i.fornitore || '—', i.stato || '—', i.pubblicatoTrasparenza ? 'Sì' : 'No']);
+    }
+    return rows;
+  }
+  async function interventiPdf() {
+    await U.ensurePdf();
+    const rows = await interventiRows();
+    const d = doc(); let y = header(d, 'Interventi di messa in sicurezza', conSede('Iter PA — D.Lgs. 36/2023 · Amm. Trasparente', await sedeAttivaNome()));
+    d.autoTable({ startY: y, styles: Object.assign({ fontSize: 7.5, cellPadding: 1.5 }, GRID), theme: 'grid',
+      head: [['N.', 'Bene', 'Tipo', 'Importo', 'Procedura', 'Atto', 'CIG', 'Fornitore', 'Stato', 'Pubbl.']],
+      body: rows.length ? rows : [['—', '', 'Nessun intervento', '', '', '', '', '', '', '']], headStyles: TH });
+    footer(d); d.save('interventi_trasparenza.pdf');
+  }
+  async function interventiDocx() {
+    await U.ensureDocx();
+    const rows = await interventiRows();
+    const children = dxTitle('Interventi di messa in sicurezza', conSede('Iter PA — D.Lgs. 36/2023 · Amm. Trasparente', await sedeAttivaNome()));
+    children.push(dxTable(['N.', 'Bene', 'Tipo', 'Importo', 'Procedura', 'Atto', 'CIG', 'Fornitore', 'Stato', 'Pubbl.'], rows.length ? rows : [['—', '', 'Nessun intervento', '', '', '', '', '', '', '']]));
+    await saveDocx('interventi_trasparenza.docx', children);
+  }
+
+  // --- Scheda singolo intervento ---
+  async function schedaIntervento(i) {
+    await U.ensurePdf();
+    const b = i.idBene ? await DB.get('beni', i.idBene) : null;
+    const ubic = b ? (await pathOfAmbiente(b.idAmbiente)).label + ' › ' + b.codice : '—';
+    const d = doc(); let y = header(d, 'Scheda intervento ' + i.numero, 'Iter PA — Codice Appalti (D.Lgs. 36/2023)');
+    d.autoTable({ startY: y, theme: 'grid', styles: Object.assign({ fontSize: 9 }, GRID), head: [['Dato', 'Valore']],
+      body: [
+        ['Bene / ubicazione', ubic], ['Classe di origine', i.classeOrigine || '—'], ['Tipo intervento', i.tipo || '—'],
+        ['Importo stimato', i.importoStimato ? '€ ' + Number(i.importoStimato).toLocaleString('it-IT') : '—'],
+        ['Categoria appalto', i.categoriaAppalto || '—'], ['Procedura', i.procedura || '—'],
+        ['Determina a contrarre', i.attoContrarre || '—'], ['Determina di affidamento', i.attoAffidamento || '—'],
+        ['CIG', i.cig || '—'], ['CUP', i.cup || '—'], ['Fornitore', i.fornitore || '—'],
+        ['Data affidamento', fmtDate(i.dataAffidamento)], ['Data esecuzione', fmtDate(i.dataEsecuzione)],
+        ['Esito collaudo', i.esitoCollaudo || '—'], ['Pubblicato in Amm. Trasparente', i.pubblicatoTrasparenza ? 'Sì' : 'No'], ['Stato', i.stato || '—']
+      ], headStyles: TH, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } } });
+    let yy = d.lastAutoTable.finalY + 8; if (yy > 250) { d.addPage(); yy = 20; } firma(d, yy); footer(d);
+    d.save('scheda_intervento_' + i.numero + '.pdf');
+  }
+  async function selezionaIntervento() {
+    let its = await DB.all('interventi');
+    if (App.sedeAttiva) { const idx = await sedeIndex(); its = its.filter(i => idx.beneSede[i.idBene] === App.sedeAttiva); }
+    if (!its.length) { toast('Nessun intervento registrato.', 'warning'); return; }
+    const opts = its.map(i => ({ value: i.id, label: i.numero + ' · ' + (i.tipo || '') + ' · ' + (i.stato || '') }));
+    const res = await modal({ title: 'Seleziona intervento', size: 'md', body: `<select class="form-select" id="si">${options(opts)}</select>`, okText: 'Genera scheda' });
+    if (!res) return;
+    run(() => schedaIntervento(its.find(x => x.id === res.querySelector('#si').value)));
+  }
+
   // ---------------- Pagina Report ----------------
   function card(icon, titolo, testo, buttons) {
     return `<div class="col-md-6"><div class="card h-100"><div class="card-body">
@@ -476,6 +563,12 @@
           pdfBtn('r-elenco-pdf') + docBtn('r-elenco-doc'))}
         ${card('🛠️', 'Piano azioni correttive', 'NC aperte/in corso ordinate per rischio.',
           pdfBtn('r-piano-pdf') + docBtn('r-piano-doc'))}
+        ${card('📗', 'Registro controlli scaffalature', 'Cronologia dei controlli UNI EN 15635 (livello, classe, prossima verifica).',
+          pdfBtn('r-reg-pdf') + docBtn('r-reg-doc'))}
+        ${card('🏛️', 'Interventi / Amm. Trasparente', 'Elenco interventi con procedura, atto, CIG, fornitore, stato e pubblicazione.',
+          pdfBtn('r-int-pdf') + docBtn('r-int-doc') + `<button class="btn btn-outline-secondary btn-sm" id="r-int-xls">📊 CSV/Excel</button>`)}
+        ${card('📄', 'Scheda singolo intervento', 'Scheda PA di un intervento (atti, CIG, fornitore, collaudo).',
+          `<button class="btn btn-outline-primary btn-sm" id="r-scheda">Seleziona intervento…</button>`)}
       </div>
       <div class="card mt-3 border-success"><div class="card-body">
         <h6>📑 Relazione finale annuale</h6>
@@ -503,6 +596,12 @@
     document.getElementById('r-piano-doc').onclick = () => run(pianoAzioniDocx);
     document.getElementById('r-rel-pdf').onclick = () => run(() => relazioneFinalePdf(anno()));
     document.getElementById('r-rel-doc').onclick = () => run(() => relazioneFinaleDocx(anno()));
+    document.getElementById('r-reg-pdf').onclick = () => run(registroControlliPdf);
+    document.getElementById('r-reg-doc').onclick = () => run(registroControlliDocx);
+    document.getElementById('r-int-pdf').onclick = () => run(interventiPdf);
+    document.getElementById('r-int-doc').onclick = () => run(interventiDocx);
+    document.getElementById('r-int-xls').onclick = () => run(Exports.interventiCsv);
+    document.getElementById('r-scheda').onclick = selezionaIntervento;
     document.getElementById('r-xls').onclick = Exports.excel;
   }
 
@@ -527,6 +626,7 @@
     renderPage,
     verbaleVerificaPdf, verbaleVerificaDocx, organigrammaPdf, organigrammaDocx,
     elencoNcPdf, elencoNcDocx, pianoAzioniPdf, pianoAzioniDocx,
-    relazioneFinalePdf, relazioneFinaleDocx
+    relazioneFinalePdf, relazioneFinaleDocx,
+    registroControlliPdf, registroControlliDocx, interventiPdf, interventiDocx, schedaIntervento
   };
 })(window);

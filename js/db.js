@@ -1,12 +1,9 @@
-/* ============================================================
-   db.js — Livello dati IndexedDB (100% locale, nessun server)
-   App Sicurezza Ambienti di Lavoro — D.Lgs. 81/2008
-   ============================================================ */
+// Dati salvati in locale con IndexedDB: niente server, tutto resta sul dispositivo.
 (function (global) {
   'use strict';
 
   const DB_NAME = 'sicurezza81_db';
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
 
   // Elenco degli object store e relativi indici
   const STORES = {
@@ -17,6 +14,7 @@
     beni:          { keyPath: 'id', indexes: [['idAmbiente', 'idAmbiente']] },
     verifiche:     { keyPath: 'id', indexes: [['idBene', 'idBene']] },
     nonconformita: { keyPath: 'id', indexes: [['idVerifica', 'idVerifica'], ['stato', 'stato']] },
+    interventi:    { keyPath: 'id', indexes: [['idBene', 'idBene'], ['idNc', 'idNc'], ['stato', 'stato']] },
     figure:        { keyPath: 'id', indexes: [['idSede', 'idSede'], ['ruolo', 'ruolo']] },
     allegati:      { keyPath: 'id', indexes: [['entita', 'entita'], ['refId', 'refId']] },
     meta:          { keyPath: 'chiave', indexes: [] }
@@ -143,6 +141,8 @@
     } else if (store === 'beni') {
       const vs = await where('verifiche', 'idBene', id);
       for (const v of vs) await removeCascade('verifiche', v.id);
+      const its = await where('interventi', 'idBene', id);
+      for (const it of its) await remove('interventi', it.id);
     } else if (store === 'verifiche') {
       const ncs = await where('nonconformita', 'idVerifica', id);
       for (const n of ncs) await remove('nonconformita', n.id);

@@ -1,7 +1,4 @@
-/* ============================================================
-   data.js — Definizioni di dominio: tipologie, categorie,
-   checklist e riferimenti normativi (D.Lgs. 81/2008)
-   ============================================================ */
+// Elenchi di base dell'applicazione: tipologie, categorie, checklist e testi di legge.
 (function (global) {
   'use strict';
 
@@ -32,6 +29,22 @@
     'Ispezione approfondita (tecnico esterno)',
     'Ispezione straordinaria'
   ];
+
+  // Interventi di messa in sicurezza — iter Pubblica Amministrazione (D.Lgs. 36/2023)
+  const CATEGORIE_APPALTO = ['Lavori', 'Fornitura e posa'];
+  const TIPI_INTERVENTO = ['Riparazione', 'Sostituzione componente', 'Sostituzione integrale', 'Dismissione (fuori uso)'];
+  const PROCEDURE_APPALTO = ['Affidamento diretto', 'Procedura negoziata', 'Procedura aperta'];
+  const ATTI_PA = ['Determina a contrarre', 'Determina di affidamento', 'Determina urgente (somma urgenza)'];
+  const STATI_INTERVENTO = ['Da avviare', 'Determina in corso', 'Affidato', 'In esecuzione', 'Collaudato/Chiuso'];
+  // Soglie affidamento diretto (D.Lgs. 36/2023 art. 50). Parametriche: verificare aggiornamenti normativi.
+  const SOGLIE_APPALTO = { 'Lavori': 150000, 'Fornitura e posa': 140000 };
+  function proceduraDaImporto(categoria, importo) {
+    const soglia = SOGLIE_APPALTO[categoria] || 140000;
+    const imp = Number(importo) || 0;
+    if (imp < soglia) return 'Affidamento diretto';
+    if (imp < 1000000) return 'Procedura negoziata';
+    return 'Procedura aperta';
+  }
 
   const LIVELLI_RISCHIO = ['Alto', 'Medio', 'Basso'];
 
@@ -186,6 +199,8 @@
   global.DATA = {
     TIPOLOGIE_AMBIENTE, CATEGORIE_BENE, ESITI, CLASSI_DANNO, TIPI_ISPEZIONE,
     LIVELLI_RISCHIO, STATI_NC, STATI_BENE, MISURE_IMMEDIATE, TIPI_ALLEGATO,
-    RUOLI_FIGURE, RUOLO_NORMA, CHECKLIST, NORMATIVA, checklistPerCategoria
+    RUOLI_FIGURE, RUOLO_NORMA, CHECKLIST, NORMATIVA, checklistPerCategoria,
+    CATEGORIE_APPALTO, TIPI_INTERVENTO, PROCEDURE_APPALTO, ATTI_PA,
+    STATI_INTERVENTO, SOGLIE_APPALTO, proceduraDaImporto
   };
 })(window);

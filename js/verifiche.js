@@ -309,6 +309,12 @@
     const saved = await DB.put('verifiche', v);
     toast('Verifica salvata.', 'success');
 
+    // classe Rosso (UNI EN 15635): messa fuori servizio immediata del bene
+    if (isScaff && v.classeDanno === 'Rosso' && v.idBene) {
+      const bene = await DB.get('beni', v.idBene);
+      if (bene && bene.stato !== 'Fuori uso' && bene.stato !== 'Dismesso') { bene.stato = 'Fuori uso'; await DB.put('beni', bene); toast('Bene ' + bene.codice + ' messo Fuori uso (classe Rossa).', 'warning'); }
+    }
+
     // proposta creazione NC se non conforme
     if (v.esito === 'Non conforme' || v.esito === 'Conforme con prescrizioni') {
       const genera = await confirmDialog('Esito con criticità: vuoi aprire una Non Conformità collegata a questa verifica?', 'Apri NC');
