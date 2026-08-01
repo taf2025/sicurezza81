@@ -54,6 +54,10 @@
     let freq = `<div class="card mb-3"><div class="card-body"><h6>⏱️ Frequenze di ispezione (UNI EN 15635)</h6>
       <div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>Livello</th><th>Frequenza</th><th>A cura di</th></tr></thead><tbody>`;
     DATA.FREQUENZE_ISPEZIONE.forEach((r) => { freq += `<tr><td>${esc(r.livello)}</td><td>${esc(r.frequenza)}</td><td>${esc(r.chi)}</td></tr>`; });
+    freq += '</tbody></table></div>';
+    freq += '<h6 class="mt-3">📏 Distanze minime tra le scaffalature</h6><p class="small text-muted mb-1">D.Lgs. 81/2008 Allegato IV p.1.4 · UNI EN 15620/15629</p>' +
+      '<div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>Riferimento</th><th>Distanza minima</th></tr></thead><tbody>';
+    DATA.DISTANZE_SCAFFALATURE.forEach((r) => { freq += `<tr><td>${esc(r.voce)}</td><td>${esc(r.valore)}</td></tr>`; });
     freq += '</tbody></table></div></div></div>';
 
     // --- Elenco scaffalature ---

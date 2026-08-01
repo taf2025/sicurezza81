@@ -3,7 +3,7 @@
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
-  const APP_VERSION = 'v36';
+  const APP_VERSION = 'v37';
 
   const App = {
     view: 'dashboard',
@@ -590,9 +590,10 @@
         ${step('2', 'Censisci la struttura', '<p class="mb-0">Inserisci in ordine gerarchico: <strong>Sedi → Edifici → Piani → Ambienti → Beni</strong>. Ogni livello ha il pulsante “+” e il conteggio dei figli per navigare in profondità. Registra scaffalature, armadi, rack, ecc. con codice identificativo, portata, ancoraggio e stato.</p>')}
         ${step('3', 'Registra la squadra (Figure)', '<p class="mb-0">In <strong>Figure sicurezza</strong> inserisci Datore di Lavoro, RSPP, Medico Competente, RLS, Preposti e il <strong>PRSES</strong> (responsabile scaffalature ex UNI EN 15635). Compaiono nell’organigramma della relazione.</p>')}
         ${step('4', 'Esegui le verifiche sul campo', '<p class="mb-0">In <strong>Verifiche</strong> apri una verifica su un bene o un ambiente: compili la <strong>checklist</strong>, l’<strong>esito</strong>, per le scaffalature la <strong>classe di danno 🟢🟡🔴</strong> e la <strong>prossima verifica</strong>. <strong>Scatti le foto</strong> (📷) e aggiungi la <strong>descrizione</strong> di ciò che osservi: le ritroverai nella relazione.</p>')}
-        ${step('5', 'Gestisci le non conformità', '<p class="mb-0">Un esito critico propone l’apertura di una <strong>Non Conformità</strong>: rischio, misure immediate, responsabile e scadenza vengono precompilati (Rosso→azione immediata, Giallo→30 giorni). Aggiorni lo stato fino a <em>Chiusa</em>.</p>')}
-        ${step('6', 'Produci i documenti', '<p class="mb-0">In <strong>Report</strong> generi verbali PDF (con foto), organigramma, elenco NC, piano azioni e la <strong>Relazione finale in Word (.docx)</strong> con la documentazione fotografica, da rifinire prima dell’invio.</p>')}
-        ${step('7', 'Lavoro in più persone e riconciliazione', `<p class="mb-1">Per lavorare in team, restando 100% offline:</p>
+        ${step('5', 'Modulo PRSES — scaffalature metalliche', '<p class="mb-1">In <strong>PRSES scaffalature</strong> gestisci le attrezzature di stoccaggio ai sensi della <strong>UNI EN 15635</strong>:</p><ul class="mb-0"><li>Registri le <strong>nomine PRSES</strong> (nominativo, atto di nomina, funzioni).</li><li>Definisci per ogni scaffalatura il <strong>sottotipo</strong> (con flag ambito PRSES), l\'anno e le note per le <strong>strutture ante-2009</strong> (perizia, sismica, usura).</li><li>Compili la <strong>scheda del cartello di portata</strong> (6 requisiti obbligatori).</li><li>Esegui l\'<strong>ispezione in 4 aree</strong>: ogni voce non conforme genera automaticamente le <strong>azioni prescritte</strong> da normativa e la <strong>classe di danno 🟢🟡🔴</strong>.</li><li>Rispetti le <strong>frequenze differenziate</strong> (visivo settimanale/mensile, approfondita annuale da tecnico esterno, straordinaria) e stampi il <strong>verbale di ispezione PRSES</strong>.</li></ul>')}
+        ${step('6', 'Gestisci le non conformità', '<p class="mb-0">Un esito critico propone l’apertura di una <strong>Non Conformità</strong>: rischio, misure immediate, responsabile e scadenza vengono precompilati (Rosso→azione immediata, Giallo→30 giorni). Aggiorni lo stato fino a <em>Chiusa</em>.</p>')}
+        ${step('7', 'Produci i documenti', '<p class="mb-0">In <strong>Report</strong> generi verbali PDF (con foto), organigramma, elenco NC, piano azioni e la <strong>Relazione finale in Word (.docx)</strong> con la documentazione fotografica, da rifinire prima dell’invio.</p>')}
+        ${step('8', 'Lavoro in più persone e riconciliazione', `<p class="mb-1">Per lavorare in team, restando 100% offline:</p>
           <ol class="mb-0">
             <li>Un referente prepara un <strong>backup di base</strong> (Backup → Scarica) e lo distribuisce.</li>
             <li>Ogni operatore imposta il <strong>proprio codice</strong> e lavora su <strong>sedi/aree diverse</strong> (per evitare doppioni).</li>

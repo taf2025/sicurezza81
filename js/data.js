@@ -184,6 +184,15 @@
     return 'Settimanale/mensile';
   }
 
+  // Distanze minime tra scaffalature e ingombri (D.Lgs. 81/2008 Allegato IV p.1.4; UNI EN 15620/15629)
+  const DISTANZE_SCAFFALATURE = [
+    { voce: 'Corridoio di solo passaggio pedonale', valore: '≥ 0,80–1,00 m' },
+    { voce: 'Corsia con carrello/transpallet (senso unico)', valore: 'ingombro mezzo + carico + 0,70 m per lato' },
+    { voce: 'Corsia a doppio senso di marcia', valore: 'ingombro mezzo + carico + ~1,40 m complessivi' },
+    { voce: 'Distanza ultimo ripiano dal soffitto/illuminazione', valore: '≥ 0,50 m' },
+    { voce: 'Distanza dai diffusori antincendio (sprinkler)', valore: '≥ 0,50 m sotto gli erogatori' }
+  ];
+
   // Logica strutture ante-2009: genera le azioni da mettere in campo
   function valutazioneAnte2009(anno, opt) {
     opt = opt || {};
@@ -295,6 +304,10 @@
       testo: 'Definisce i requisiti di stabilità e solidità (punto 1.1), l\'altezza, cubatura e superficie, i pavimenti, muri, soffitti (1.3), le vie di circolazione, zone di pericolo (1.4), le vie e uscite di emergenza (1.5), la difesa contro incendi. Le scaffalature e i depositi non devono compromettere la sicurezza dei luoghi. Riferimento tecnico principale delle checklist.'
     },
     {
+      art: 'Allegato IV — punto 1.4', titolo: 'Vie di circolazione e distanze tra le scaffalature',
+      testo: 'Le vie di circolazione, comprese quelle tra le scaffalature, devono essere dimensionate in modo da consentire il transito sicuro di persone e mezzi. Criteri applicativi: corridoi per il solo passaggio pedonale non inferiori a 0,80–1,00 m; corsie percorse da carrelli/transpallet almeno pari all\'ingombro del mezzo (compreso il carico) maggiorato di 0,70 m per ciascun lato, elevati a circa 1,40 m complessivi in caso di doppio senso di marcia. Va inoltre garantita la distanza minima di sicurezza tra l\'ultimo ripiano e il soffitto, i corpi illuminanti e gli impianti antincendio (in genere ≥ 0,50 m dagli sprinkler). Le corsie non devono mai essere ostruite da materiale temporaneo e non devono compromettere le vie di esodo. Le tolleranze di installazione e i giochi operativi tra unità di carico e struttura sono definiti dalle norme tecniche UNI EN 15620 e UNI EN 15629.'
+    },
+    {
       art: 'UNI EN 15635', titolo: 'Uso e manutenzione delle attrezzature di stoccaggio',
       testo: 'Norma tecnica di riferimento (richiamata dall\'art. 18 e dall\'Allegato IV del D.Lgs. 81/2008) per l\'uso e la manutenzione delle scaffalature metalliche. Prevede quattro livelli di controllo: controllo visivo quotidiano, ispezione sistematica interna, ispezione approfondita da tecnico qualificato (cadenza non superiore a 12 mesi) e ispezione straordinaria (dopo urti, sismi o modifiche). Introduce la figura del PRSES (Persona Responsabile della Sicurezza delle attrezzature di Stoccaggio) e la classificazione dei danni a semaforo: Verde (idoneo, monitoraggio), Giallo (intervento entro 30 giorni), Rosso (messa fuori servizio immediata). Il verbale deve contenere osservazioni, classificazione dei danni, rilievo fotografico e piano d\'azione.'
     }
@@ -307,6 +320,7 @@
     CATEGORIE_APPALTO, TIPI_INTERVENTO, PROCEDURE_APPALTO, ATTI_PA,
     STATI_INTERVENTO, SOGLIE_APPALTO, proceduraDaImporto,
     SOTTOTIPI_SCAFFALATURA, ambitoPRSES, CHECKLIST_PRSES, azioniPrescritte,
-    CARTELLO_PORTATA, FREQUENZE_ISPEZIONE, frequenzaConsigliata, valutazioneAnte2009
+    CARTELLO_PORTATA, FREQUENZE_ISPEZIONE, frequenzaConsigliata, valutazioneAnte2009,
+    DISTANZE_SCAFFALATURE
   };
 })(window);
