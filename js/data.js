@@ -98,6 +98,110 @@
     'Altro': '—'
   };
 
+  // ======== MODULO PRSES — Scaffalature metalliche (UNI EN 15635) ========
+
+  // Sottotipi di scaffalatura con flag "ambito PRSES" (true = soggetta a verifica PRSES)
+  const SOTTOTIPI_SCAFFALATURA = [
+    { nome: 'Scaffalatura a ripiani (archivio/leggera)', ambito: true },
+    { nome: 'Scaffalatura portapallet (carichi pesanti)', ambito: true },
+    { nome: 'Scaffalatura cantilever (materiali lunghi)', ambito: true },
+    { nome: 'Scaffalatura drive-in / drive-through', ambito: true },
+    { nome: 'Archivio compattabile su basi mobili', ambito: true },
+    { nome: 'Armadio metallico da ufficio', ambito: false },
+    { nome: 'Armadio spogliatoio', ambito: false },
+    { nome: 'Classificatore / cassettiera', ambito: false },
+    { nome: 'Scaffalatura non metallica (legno/plastica)', ambito: false }
+  ];
+  // Restituisce true se il sottotipo rientra nelle verifiche del PRSES
+  function ambitoPRSES(sottotipo) {
+    const s = SOTTOTIPI_SCAFFALATURA.find((x) => x.nome === sottotipo);
+    return s ? s.ambito : false;
+  }
+
+  // Checklist ispezione PRSES organizzata in 4 aree. Ogni voce non conforme
+  // porta un elenco di azioni prescritte secondo normativa vigente.
+  const CHECKLIST_PRSES = [
+    {
+      area: 'Integrità strutturale',
+      voci: [
+        { t: 'Montanti e correnti privi di deformazioni/piegature', az: ['Scaricare il livello o la campata interessata', 'Classificare il danno (semaforo UNI EN 15635)', 'Sostituire il componente deformato con ricambio originale'] },
+        { t: 'Assenza di danni da urto sui montanti (parti basse)', az: ['Applicare paracolpi/protezioni di base', 'Valutare la sostituzione del montante ammaccato', 'Rivedere la viabilità dei mezzi di movimentazione'] },
+        { t: 'Assenza di fessurazioni/cedimenti nelle saldature e nei nodi', az: ['Messa fuori servizio immediata (classe Rosso)', 'Perizia di un tecnico strutturista', 'Sostituzione del componente lesionato'] }
+      ]
+    },
+    {
+      area: 'Collegamenti e fissaggi',
+      voci: [
+        { t: 'Tasselli di ancoraggio a pavimento/parete saldi', az: ['Serrare o sostituire i tasselli allentati', 'Verificare l\'idoneità del supporto (pavimento/parete)', 'Interdire l\'uso fino al ripristino dell\'ancoraggio'] },
+        { t: 'Presenza di tutte le spine/gancetti di sicurezza dei correnti', az: ['Installare le spine di sicurezza mancanti', 'Vietare l\'uso della campata priva di spine', 'Verificare che i correnti non siano sganciabili'] },
+        { t: 'Piastre di base integre e ben poggiate a terra', az: ['Ripristinare l\'appoggio della piastra', 'Verificare cedimenti/avvallamenti del pavimento', 'Livellare o rinforzare la base'] }
+      ]
+    },
+    {
+      area: 'Condizioni di carico e utilizzo',
+      voci: [
+        { t: 'Carico entro la portata indicata (nessun sovraccarico)', az: ['Ridurre immediatamente il carico entro i limiti', 'Ridistribuire i faldoni sui livelli', 'Aggiornare/affiggere il cartello di portata'] },
+        { t: 'Carico stabile e ordinato, senza sporgenze pericolose', az: ['Riordinare il materiale stoccato', 'Rimuovere le sporgenze verso i corridoi', 'Formare il personale sul corretto stoccaggio'] },
+        { t: 'Distanza di sicurezza dal soffitto/impianti antincendio', az: ['Abbassare i livelli di stoccaggio', 'Ripristinare le distanze minime da sprinkler/illuminazione', 'Vietare lo stoccaggio sull\'ultimo ripiano se non a norma'] }
+      ]
+    },
+    {
+      area: 'Ambiente e sicurezza generale',
+      voci: [
+        { t: 'Cartelli di portata presenti e leggibili', az: ['Affiggere/ripristinare il cartello di portata a norma', 'Se dati originali persi: perizia per calcolo portata', 'Posizionare il cartello a inizio corsia/blocco'] },
+        { t: 'Vie di transito tra le scaffalature libere', az: ['Sgomberare i corridoi da materiale temporaneo', 'Ripristinare la larghezza minima dei passaggi', 'Non ostruire le vie di fuga'] },
+        { t: 'Assenza di corrosione/ruggine da umidità o infiltrazioni', az: ['Individuare ed eliminare la fonte di umidità', 'Trattare/sostituire i componenti corrosi', 'Intensificare la frequenza dei controlli (locali interrati)'] }
+      ]
+    }
+  ];
+  // Restituisce le azioni prescritte per una voce non conforme (area, indice voce)
+  function azioniPrescritte(indiceArea, indiceVoce) {
+    const a = CHECKLIST_PRSES[indiceArea];
+    return a && a.voci[indiceVoce] ? a.voci[indiceVoce].az : [];
+  }
+
+  // Scheda cartello di portata — 6 requisiti obbligatori (UNI EN 15635)
+  const CARTELLO_PORTATA = [
+    { chiave: 'costruttore', label: 'Identificativo costruttore (nome/logo) e anno di installazione' },
+    { chiave: 'portataRipiano', label: 'Portata massima del ripiano (kg, carico uniformemente distribuito)' },
+    { chiave: 'portataSpalla', label: 'Portata massima della spalla/campata (kg totali colonna)' },
+    { chiave: 'altezzaRipiani', label: 'Altezza/quote dei ripiani (passi di configurazione)' },
+    { chiave: 'noteSicurezza', label: 'Note di sicurezza e divieti (arrampicarsi, modificare, segnalare danni)' },
+    { chiave: 'riferimenti', label: 'Riferimenti normativi (struttura soggetta a UNI EN 15635)' }
+  ];
+
+  // Frequenze di ispezione differenziate (UNI EN 15635 / D.Lgs. 81/2008)
+  const FREQUENZE_ISPEZIONE = [
+    { livello: 'Controllo visivo immediato', frequenza: 'Continuo (a cura degli utilizzatori)', chi: 'Personale utilizzatore' },
+    { livello: 'Controllo visivo periodico', frequenza: 'Settimanale/mensile', chi: 'PRSES' },
+    { livello: 'Ispezione settimanale rinforzata (strutture ante-2009 / seminterrati)', frequenza: 'Settimanale', chi: 'PRSES' },
+    { livello: 'Ispezione approfondita', frequenza: 'Almeno una volta l\'anno (max 12 mesi)', chi: 'Tecnico esperto esterno certificato' },
+    { livello: 'Ispezione straordinaria', frequenza: 'Dopo urti, sismi o modifiche', chi: 'Tecnico qualificato' }
+  ];
+  // Frequenza consigliata del controllo visivo in base all'epoca/ambiente
+  function frequenzaConsigliata(anno, seminterrato) {
+    if ((Number(anno) && Number(anno) < 2009) || seminterrato) return 'Settimanale (struttura datata o locale umido/interrato)';
+    return 'Settimanale/mensile';
+  }
+
+  // Logica strutture ante-2009: genera le azioni da mettere in campo
+  function valutazioneAnte2009(anno, opt) {
+    opt = opt || {};
+    const az = [];
+    if (!(Number(anno) && Number(anno) < 2009)) return az;
+    az.push('Struttura antecedente a UNI EN 15635:2009 — applicare tutele specifiche.');
+    if (opt.docPersa)
+      az.push('Documentazione/portata originale assente: incaricare un ingegnere strutturista iscritto all\'albo per rilievo geometrico, verifica spessore acciaio e relazione di calcolo della portata; solo dopo affiggere i cartelli di portata.');
+    else
+      az.push('Verificare la disponibilità del manuale d\'uso e dei dati di portata del costruttore.');
+    if (opt.sismica)
+      az.push('Conformità sismica non garantita: valutare nel DVR il rischio di ribaltamento e prevedere adeguamento (croci di controvento di Sant\'Andrea, tassellatura rinforzata a parete/soffitto) per evitare l\'effetto domino.');
+    if (opt.modifiche)
+      az.push('Modifiche/spostamenti di ripiani nel tempo: ripristinare i passi standard e le spine di sicurezza originali; verificare la stabilità complessiva.');
+    az.push('Obblighi comunque vigenti (art. 64 e Allegato IV D.Lgs. 81/2008): nomina PRSES, ispezione annuale di tecnico certificato e controlli visivi settimanali rinforzati (ruggine, micro-fessurazioni).');
+    return az;
+  }
+
   // -------- Checklist con riferimenti normativi --------
   const CHECKLIST = {
     scaffalature: {
@@ -201,6 +305,8 @@
     LIVELLI_RISCHIO, STATI_NC, STATI_BENE, MISURE_IMMEDIATE, TIPI_ALLEGATO,
     RUOLI_FIGURE, RUOLO_NORMA, CHECKLIST, NORMATIVA, checklistPerCategoria,
     CATEGORIE_APPALTO, TIPI_INTERVENTO, PROCEDURE_APPALTO, ATTI_PA,
-    STATI_INTERVENTO, SOGLIE_APPALTO, proceduraDaImporto
+    STATI_INTERVENTO, SOGLIE_APPALTO, proceduraDaImporto,
+    SOTTOTIPI_SCAFFALATURA, ambitoPRSES, CHECKLIST_PRSES, azioniPrescritte,
+    CARTELLO_PORTATA, FREQUENZE_ISPEZIONE, frequenzaConsigliata, valutazioneAnte2009
   };
 })(window);

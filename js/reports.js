@@ -445,7 +445,7 @@
 
   // --- Registro controlli scaffalature (UNI EN 15635 / art. 71 D.Lgs. 81/2008) ---
   async function registroRows() {
-    let vs = (await DB.all('verifiche')).filter(v => v.tipoChecklist === 'scaffalature');
+    let vs = (await DB.all('verifiche')).filter(v => v.tipoChecklist === 'scaffalature' || v.tipoChecklist === 'prses');
     vs = await filtraSede(vs, 'verifiche');
     vs.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
     const rows = [];
@@ -530,6 +530,79 @@
     run(() => schedaIntervento(its.find(x => x.id === res.querySelector('#si').value)));
   }
 
+  // --- Verbale ispezione PRSES (UNI EN 15635) ---
+  async function verbalePRSESData(v) {
+    const ctx = await contextOfVerifica(v);
+    const b = ctx.bene || {};
+    const info = [
+      ['Ubicazione', ctx.label],
+      ['Scaffalatura', b.codice ? (b.codice + ' — ' + (b.sottotipo || b.categoria || '')) : '—'],
+      ['Anno struttura', b.anno ? String(b.anno) : '—'],
+      ['Data ispezione', fmtDate(v.data)],
+      ['Tipo ispezione', v.tipoIspezione || '—'],
+      ['PRSES / Verificatore', v.verificatore || '—'],
+      ['Classe di danno (UNI EN 15635)', v.classeDanno ? (v.classeDanno + (DATA.CLASSI_DANNO[v.classeDanno] ? ' — ' + DATA.CLASSI_DANNO[v.classeDanno].azione : '')) : '—'],
+      ['Esito', v.esito || '—'],
+      ['Prossima ispezione', fmtDate(v.prossimaVerifica)]
+    ];
+    // azioni prescritte per le voci non conformi
+    const azioni = [];
+    (v.aree || []).forEach((a) => (a.voci || []).forEach((voce) => {
+      if (voce.esito === 'no') (voce.az || []).forEach((x) => azioni.push([voce.t, x]));
+    }));
+    // scheda cartello di portata
+    const cartello = (b.cartello ? DATA.CARTELLO_PORTATA.map((r) => [r.label, b.cartello[r.chiave] ? 'Presente' + (typeof b.cartello[r.chiave] === 'string' && b.cartello[r.chiave].length > 4 ? ': ' + b.cartello[r.chiave] : '') : 'ASSENTE']) : []);
+    // valutazione strutture ante-2009
+    const ante = (v.ante2009 && v.ante2009.length) ? v.ante2009 : (b.anno ? DATA.valutazioneAnte2009(b.anno, b.ante2009 || {}) : []);
+    const nc = await DB.all('nonconformita');
+    const imgAll = (await DB.all('allegati')).filter((a) => a.mime && a.mime.startsWith('image/'));
+    const foto = fotoDiVerifica(v, imgAll, ncByVerifica(nc));
+    return { ctx, b, info, azioni, cartello, ante, foto };
+  }
+
+  async function verbalePRSESPdf(v) {
+    await U.ensurePdf();
+    const { ctx, info, azioni, cartello, ante, foto } = await verbalePRSESData(v);
+    const d = doc();
+    let y = header(d, 'Verbale ispezione PRSES', 'Riferimento: UNI EN 15635 — D.Lgs. 81/2008 artt. 18, 63, 64, Allegato IV');
+    d.autoTable({ startY: y, theme: 'grid', styles: Object.assign({ fontSize: 9 }, GRID), head: [['Dato', 'Valore']], body: info, headStyles: TH, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 } } });
+    (v.aree || []).forEach((a) => {
+      d.autoTable({
+        startY: d.lastAutoTable.finalY + 4, theme: 'grid', styles: Object.assign({ fontSize: 9 }, GRID),
+        head: [[a.area, 'Esito']], headStyles: TH,
+        body: (a.voci || []).map((voce) => [voce.t, voce.esito === 'si' ? 'Conforme' : voce.esito === 'no' ? 'NON CONFORME' : voce.esito === 'na' ? 'N.A.' : '—']),
+        didParseCell: (data) => { if (data.section === 'body' && data.column.index === 1 && data.cell.raw === 'NON CONFORME') data.cell.styles.fontStyle = 'bold'; }
+      });
+    });
+    if (azioni.length) d.autoTable({ startY: d.lastAutoTable.finalY + 4, theme: 'grid', styles: Object.assign({ fontSize: 9 }, GRID), head: [['Voce non conforme', 'Azione prescritta']], body: azioni, headStyles: TH });
+    if (cartello.length) d.autoTable({ startY: d.lastAutoTable.finalY + 4, theme: 'grid', styles: Object.assign({ fontSize: 9 }, GRID), head: [['Cartello di portata — requisito', 'Stato']], body: cartello, headStyles: TH });
+    if (ante.length) d.autoTable({ startY: d.lastAutoTable.finalY + 4, theme: 'grid', styles: Object.assign({ fontSize: 9 }, GRID), head: [['Strutture ante-2009 — azioni da mettere in campo']], body: ante.map((x) => [x]), headStyles: TH });
+    let yy = d.lastAutoTable.finalY + 6;
+    if (v.note) { d.setFont('helvetica', 'bold'); d.setFontSize(9); d.text('Note:', 14, yy); d.setFont('helvetica', 'normal'); const lines = d.splitTextToSize(v.note, 180); d.text(lines, 14, yy + 5); yy += 5 + lines.length * 5; }
+    yy = await pdfFotografie(d, yy + 4, foto.length ? [{ foto }] : []);
+    if (yy > 255) { d.addPage(); yy = 20; }
+    firma(d, yy + 6); footer(d);
+    d.save('verbale_prses_' + (ctx.bene ? ctx.bene.codice : 'x') + '.pdf');
+  }
+
+  async function verbalePRSESDocx(v) {
+    await U.ensureDocx();
+    const { ctx, info, azioni, cartello, ante, foto } = await verbalePRSESData(v);
+    const children = dxTitle('Verbale ispezione PRSES', 'Riferimento: UNI EN 15635 — D.Lgs. 81/2008 artt. 18, 63, 64, Allegato IV');
+    children.push(dxTable(['Dato', 'Valore'], info));
+    (v.aree || []).forEach((a) => {
+      children.push(dxH2(a.area));
+      children.push(dxTable(['Requisito verificato', 'Esito'], (a.voci || []).map((voce) => [voce.t, voce.esito === 'si' ? 'Conforme' : voce.esito === 'no' ? 'NON CONFORME' : voce.esito === 'na' ? 'N.A.' : '—'])));
+    });
+    if (azioni.length) { children.push(dxH2('Azioni prescritte')); children.push(dxTable(['Voce non conforme', 'Azione prescritta'], azioni)); }
+    if (cartello.length) { children.push(dxH2('Scheda cartello di portata')); children.push(dxTable(['Requisito', 'Stato'], cartello)); }
+    if (ante.length) { children.push(dxH2('Strutture ante-2009 — azioni da mettere in campo')); ante.forEach((x) => children.push(dxP('• ' + x))); }
+    if (v.note) { children.push(dxH2('Note')); children.push(dxP(v.note)); }
+    if (foto.length) { children.push(dxH2('Documentazione fotografica')); let n = 0; for (const a of foto) { n++; (await dxFoto(a, n)).forEach((p) => children.push(p)); } }
+    dxFirma().forEach((p) => children.push(p));
+    await saveDocx('verbale_prses_' + (ctx.bene ? ctx.bene.codice : 'x') + '.docx', children);
+  }
+
   // ---------------- Pagina Report ----------------
   function card(icon, titolo, testo, buttons) {
     return `<div class="col-md-6"><div class="card h-100"><div class="card-body">
@@ -565,10 +638,8 @@
           pdfBtn('r-piano-pdf') + docBtn('r-piano-doc'))}
         ${card('📗', 'Registro controlli scaffalature', 'Cronologia dei controlli UNI EN 15635 (livello, classe, prossima verifica).',
           pdfBtn('r-reg-pdf') + docBtn('r-reg-doc'))}
-        ${card('🏛️', 'Interventi / Amm. Trasparente', 'Elenco interventi con procedura, atto, CIG, fornitore, stato e pubblicazione.',
-          pdfBtn('r-int-pdf') + docBtn('r-int-doc') + `<button class="btn btn-outline-secondary btn-sm" id="r-int-xls">📊 CSV/Excel</button>`)}
-        ${card('📄', 'Scheda singolo intervento', 'Scheda PA di un intervento (atti, CIG, fornitore, collaudo).',
-          `<button class="btn btn-outline-primary btn-sm" id="r-scheda">Seleziona intervento…</button>`)}
+        ${card('🗄️', 'Verbale ispezione PRSES', 'Ispezione scaffalatura in 4 aree con azioni prescritte, cartello di portata e note ante-2009.',
+          pdfBtn('r-prses-pdf', 'Verbale PDF') + docBtn('r-prses-doc', 'Verbale Word'))}
       </div>
       <div class="card mt-3 border-success"><div class="card-body">
         <h6>📑 Relazione finale annuale</h6>
@@ -598,10 +669,8 @@
     document.getElementById('r-rel-doc').onclick = () => run(() => relazioneFinaleDocx(anno()));
     document.getElementById('r-reg-pdf').onclick = () => run(registroControlliPdf);
     document.getElementById('r-reg-doc').onclick = () => run(registroControlliDocx);
-    document.getElementById('r-int-pdf').onclick = () => run(interventiPdf);
-    document.getElementById('r-int-doc').onclick = () => run(interventiDocx);
-    document.getElementById('r-int-xls').onclick = () => run(Exports.interventiCsv);
-    document.getElementById('r-scheda').onclick = selezionaIntervento;
+    document.getElementById('r-prses-pdf').onclick = () => selPRSESVerbale('pdf');
+    document.getElementById('r-prses-doc').onclick = () => selPRSESVerbale('docx');
     document.getElementById('r-xls').onclick = Exports.excel;
   }
 
@@ -622,11 +691,25 @@
     run(() => format === 'docx' ? verbaleVerificaDocx(v) : verbaleVerificaPdf(v));
   }
 
+  // selettore verbale PRSES dalla pagina Report
+  async function selPRSESVerbale(format) {
+    let verifiche = (await DB.all('verifiche')).filter((v) => v.tipoChecklist === 'prses').sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    verifiche = await filtraSede(verifiche, 'verifiche');
+    if (!verifiche.length) { toast('Nessuna ispezione PRSES registrata' + (App.sedeAttiva ? ' per la sede selezionata' : '') + '.', 'warning'); return; }
+    const opts = [];
+    for (const v of verifiche) { const ctx = await contextOfVerifica(v); opts.push({ value: v.id, label: fmtDate(v.data) + ' · ' + ctx.label + ' · ' + (v.classeDanno || '') }); }
+    const res = await modal({ title: 'Seleziona ispezione PRSES', size: 'md', body: `<select class="form-select" id="spv">${options(opts)}</select>`, okText: 'Genera ' + (format === 'docx' ? 'Word' : 'PDF') });
+    if (!res) return;
+    const v = await DB.get('verifiche', res.querySelector('#spv').value);
+    run(() => format === 'docx' ? verbalePRSESDocx(v) : verbalePRSESPdf(v));
+  }
+
   global.Reports = {
     renderPage,
     verbaleVerificaPdf, verbaleVerificaDocx, organigrammaPdf, organigrammaDocx,
     elencoNcPdf, elencoNcDocx, pianoAzioniPdf, pianoAzioniDocx,
     relazioneFinalePdf, relazioneFinaleDocx,
-    registroControlliPdf, registroControlliDocx, interventiPdf, interventiDocx, schedaIntervento
+    registroControlliPdf, registroControlliDocx, interventiPdf, interventiDocx, schedaIntervento,
+    verbalePRSESPdf, verbalePRSESDocx
   };
 })(window);

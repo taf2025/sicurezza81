@@ -3,7 +3,7 @@
   'use strict';
   const { esc, toast, modal, confirmDialog, options } = U;
 
-  const APP_VERSION = 'v34';
+  const APP_VERSION = 'v36';
 
   const App = {
     view: 'dashboard',
@@ -373,8 +373,8 @@
     if (v === 'dashboard') return Dashboard.render();
     if (v === 'verifiche') return Verifiche.render();
     if (v === 'nonconformita') return NC.render();
-    if (v === 'interventi') return Interventi.render();
     if (v === 'figure') return Figure.render();
+    if (v === 'prses') return PRSES.render();
     if (v === 'report') return Reports.renderPage();
     if (v === 'normativa') return renderNormativa();
     if (v === 'backup') return renderBackup();
