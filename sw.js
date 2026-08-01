@@ -1,5 +1,5 @@
 // Service Worker: tiene l'app in cache per farla funzionare anche senza rete.
-const CACHE = 'sicurezza81-v33';
+const CACHE = 'sicurezza81-v34';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
   './js/dashboard.js',
   './js/verifiche.js',
   './js/nc.js',
+  './js/interventi.js',
   './js/figure.js',
   './js/reports.js',
   './js/exports.js',
